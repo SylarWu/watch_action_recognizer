@@ -1,1 +1,0 @@
-# watch_action_recognizer
