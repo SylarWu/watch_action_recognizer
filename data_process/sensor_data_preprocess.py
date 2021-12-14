@@ -1,7 +1,11 @@
 import os
-import random
+
 import numpy as np
 import scipy.io as scio
+import torch
+import torch.nn.functional as F
+
+from data_process.sensor_data import SensorData
 
 
 def _init_config(datasource_path: os.path):
@@ -17,95 +21,92 @@ def _init_config(datasource_path: os.path):
     return sorted(users), sorted(actions), sorted(attempts), sorted(file_path_list)
 
 
-def preprocess_with_padding(datasource_path: os.path,
-                            output_dir: os.path,
-                            strategy: str = 'shuffle',
-                            ratio: list = [0.8, 0.1, 0.1],
-                            max_seq_len: int = 224):
+def preprocess_with_upsampling(datasource_path: os.path,
+                               output_dir: os.path,
+                               strategy: str = 'normal',
+                               ratio: list = [0.8, 0.2],
+                               seq_len: int = 224):
     """
-    使用padding预处理数据，将其制作成train/dev/test
+    在序列轴上进行上采样到固定长度，依据不同策略切分数据成训练/测试集
     :param datasource_path: 数据源路径
     :param output_dir: 输出路径
     :param strategy: 制作数据策略: normal/user_independent/shuffle/
         normal: train到所有人的动作
-        user_independent: train部分人的动作，dev和test都是没见过的人
+        user_i: test第i人，其余人数据进行train
         shuffle: 随机shuffle，上面两种的折衷
-    :param ratio: train/dev/test比例
-    :param max_seq_len: padding的最大长度
-    :return:
+    :param ratio: train/test比例
+    :param seq_len: 固定长度
+    :return: 在output_dir下生成train.mat/test.mat
     """
-    if not os.path.exists(os.path.join(output_dir, 'after_padding_%d' % max_seq_len)):
-        os.makedirs(os.path.join(output_dir, 'after_padding_%d' % max_seq_len))
-
+    if not os.path.exists(os.path.join(output_dir, 'after_upsampling_%d' % seq_len)):
+        os.makedirs(os.path.join(output_dir, 'after_upsampling_%d' % seq_len))
+    # 初试化源数据参数
     users, actions, attempts, file_path_list = _init_config(datasource_path)
-    if strategy == 'shuffle':
-        save_data = {
-            'acc': list(),
-            'gyr': list(),
-            'label': list(),
-            'length': list(),
-        }
-        for file_path in file_path_list:
-            temp_data = scio.loadmat(os.path.join(datasource_path, file_path))
-            length = temp_data['label'].shape[1]
-            for i in range(length // max_seq_len + 1):
-                # 初试化
-                temp_acc = np.zeros((3, max_seq_len), dtype=np.float32)
-                temp_gyr = np.zeros((3, max_seq_len), dtype=np.float32)
-                temp_label = np.zeros(max_seq_len, dtype=np.int32)
+    # 首先对所有数据进行上采样到固定长度，超过固定长度的上采样到固定长度的倍数
+    merge_by_user_id = [list() for _ in users]
+    merge_by_attempt_id = [list() for _ in attempts]
+    for file_path in file_path_list:
+        user_id, action_id, attempt_id = file_path.split('.')[0].split('_')
+        origin_mat = scio.loadmat(os.path.join(datasource_path, file_path))
 
-                if (i + 1) * max_seq_len > length:
-                    # 长度过短
-                    temp_acc[:, :length - i * max_seq_len] = temp_data['accData'][:, :, i * max_seq_len:]
-                    temp_gyr[:, :length - i * max_seq_len] = temp_data['gyrData'][:, :, i * max_seq_len:]
-                    temp_label[:length - i * max_seq_len] = temp_data['label'][:, i * max_seq_len:]
-                else:
-                    # 长度足够max_seq_len
-                    temp_acc[:, :] = temp_data['accData'][:, :, i * max_seq_len: (i + 1) * max_seq_len]
-                    temp_gyr[:, :] = temp_data['gyrData'][:, :, i * max_seq_len: (i + 1) * max_seq_len]
-                    temp_label = temp_data['label'][:, i * max_seq_len: (i + 1) * max_seq_len]
-                save_data['acc'].append(temp_acc)
-                save_data['gyr'].append(temp_gyr)
-                save_data['label'].append(temp_label)
-                save_data['length'].append(max_seq_len if (i + 1) * max_seq_len > length else length - i * max_seq_len)
-        indexes = list(range(len(save_data['length'])))
-        random.shuffle(indexes)
-        acc = np.zeros((len(indexes), 3, max_seq_len), np.float32)
-        gyr = np.zeros((len(indexes), 3, max_seq_len), np.float32)
-        label = np.zeros((len(indexes), max_seq_len), np.int32)
-        length = np.zeros((len(indexes)))
-        for i, index in enumerate(indexes):
-            acc[i, :, :] = save_data['acc'][index][:, :]
-            gyr[i, :, :] = save_data['gyr'][index][:, :]
-            label[i, :] = save_data['label'][index][:]
-            length[i] = save_data['length'][index]
-        scio.savemat(os.path.join(output_dir, 'after_padding_%d' % max_seq_len, 'train.mat'), {
-            'accData': acc[:int(len(indexes) * ratio[0])],
-            'gyrData': gyr[:int(len(indexes) * ratio[0])],
-            'label': label[:int(len(indexes) * ratio[0])],
-            'length': length[:int(len(indexes) * ratio[0])],
-        })
+        length = origin_mat['label'].shape[1]
+        factor = length // seq_len + 1
+        assert origin_mat['label'][0][0] == int(action_id)
 
-        scio.savemat(os.path.join(output_dir, 'after_padding_%d' % max_seq_len, 'dev.mat'), {
-            'accData': acc[int(len(indexes) * ratio[0]):int(len(indexes) * (ratio[0] + ratio[1]))],
-            'gyrData': gyr[int(len(indexes) * ratio[0]):int(len(indexes) * (ratio[0] + ratio[1]))],
-            'label': label[int(len(indexes) * ratio[0]):int(len(indexes) * (ratio[0] + ratio[1]))],
-            'length': length[int(len(indexes) * ratio[0]):int(len(indexes) * (ratio[0] + ratio[1]))],
-        })
+        acc = F.interpolate(torch.from_numpy(origin_mat['accData']), size=(factor * seq_len), mode='linear')
+        gyr = F.interpolate(torch.from_numpy(origin_mat['gyrData']), size=(factor * seq_len), mode='linear')
+        label = origin_mat['label'][0][0] * torch.ones((1, factor * seq_len))
 
-        scio.savemat(os.path.join(output_dir, 'after_padding_%d' % max_seq_len, 'test.mat'), {
-            'accData': acc[int(len(indexes) * (ratio[0] + ratio[1])):],
-            'gyrData': gyr[int(len(indexes) * (ratio[0] + ratio[1])):],
-            'label': label[int(len(indexes) * (ratio[0] + ratio[1])):],
-            'length': length[int(len(indexes) * (ratio[0] + ratio[1])):],
-        })
+        for i in range(factor):
+            sensor_data = SensorData(user_id=int(user_id),
+                                     action_id=int(action_id),
+                                     attempt_id=int(attempt_id),
+                                     accData=acc[0, :, i * seq_len:(i + 1) * seq_len],
+                                     gyrData=gyr[0, :, i * seq_len:(i + 1) * seq_len],
+                                     label=label[0, i * seq_len:(i + 1) * seq_len])
+            merge_by_user_id[sensor_data.user_id - 1].append(sensor_data)
+            merge_by_attempt_id[sensor_data.attempt_id].append(sensor_data)
+    # 上采样完成，开始基于策略对数据进行划分
+    train_data = {
+        'accData': list(),
+        'gyrData': list(),
+        'label': list(),
+    }
+    test_data = {
+        'accData': list(),
+        'gyrData': list(),
+        'label': list(),
+    }
+    if strategy == 'normal':
+        for attempt_id, data in enumerate(merge_by_attempt_id):
+            if (attempt_id + 1) % 5 == 0:
+                # 加入测试集
+                for instance in data:
+                    assert instance.attempt_id == attempt_id
+                    test_data['accData'].append(instance.accData.numpy())
+                    test_data['gyrData'].append(instance.gyrData.numpy())
+                    test_data['label'].append(instance.label.numpy())
+            else:
+                # 加入训练集
+                for instance in data:
+                    assert instance.attempt_id == attempt_id
+                    train_data['accData'].append(instance.accData.numpy())
+                    train_data['gyrData'].append(instance.gyrData.numpy())
+                    train_data['label'].append(instance.label.numpy())
 
-
-def preprocess_with_overlap(seq_len: int = 224):
-    pass
+    elif strategy == 'shuffle':
+        pass
+    else:
+        pass
+    for key, value in train_data.items():
+        train_data[key] = np.array(value)
+    for key, value in test_data.items():
+        test_data[key] = np.array(value)
+    scio.savemat(os.path.join(output_dir, 'after_upsampling_%d' % seq_len, 'train.mat'), train_data)
+    scio.savemat(os.path.join(output_dir, 'after_upsampling_%d' % seq_len, 'test.mat'), test_data)
 
 
 if __name__ == '__main__':
     datasource_path = os.path.join('F:/CODE/Python/watch_action_recognizer/data_source/transform_source')
     output_dir = os.path.join('F:/CODE/Python/watch_action_recognizer/data_source/')
-    preprocess_with_padding(datasource_path, output_dir)
+    preprocess_with_upsampling(datasource_path, output_dir)
