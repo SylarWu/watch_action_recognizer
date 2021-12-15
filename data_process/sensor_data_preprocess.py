@@ -1,4 +1,5 @@
 import os
+import random
 
 import numpy as np
 import scipy.io as scio
@@ -9,6 +10,9 @@ from data_process.sensor_data import SensorData
 
 
 def _init_config(datasource_path: os.path):
+    # user_id: 1 - 10
+    # action_id: 1 - 18
+    # attempt_id: 0 - 9
     file_path_list = os.listdir(datasource_path)
     users = set()
     actions = set()
@@ -38,8 +42,8 @@ def preprocess_with_upsampling(datasource_path: os.path,
     :param seq_len: 固定长度
     :return: 在output_dir下生成train.mat/test.mat
     """
-    if not os.path.exists(os.path.join(output_dir, 'after_upsampling_%d' % seq_len)):
-        os.makedirs(os.path.join(output_dir, 'after_upsampling_%d' % seq_len))
+    if not os.path.exists(os.path.join(output_dir, '%s_upsampling_%d' % (strategy, seq_len))):
+        os.makedirs(os.path.join(output_dir, '%s_upsampling_%d' % (strategy, seq_len)))
     # 初试化源数据参数
     users, actions, attempts, file_path_list = _init_config(datasource_path)
     # 首先对所有数据进行上采样到固定长度，超过固定长度的上采样到固定长度的倍数
@@ -95,18 +99,62 @@ def preprocess_with_upsampling(datasource_path: os.path,
                     train_data['label'].append(instance.label.numpy())
 
     elif strategy == 'shuffle':
-        pass
+        for attempt_id, data in enumerate(merge_by_attempt_id):
+            # 先shuffle
+            random.shuffle(data)
+            # 前ratio[0]加入训练集
+            for instance in data[:int(len(data) * ratio[0])]:
+                assert instance.attempt_id == attempt_id
+                train_data['accData'].append(instance.accData.numpy())
+                train_data['gyrData'].append(instance.gyrData.numpy())
+                train_data['label'].append(instance.label.numpy())
+            # 后ratio[1]加入测试集
+            for instance in data[int(len(data) * ratio[0]):]:
+                assert instance.attempt_id == attempt_id
+                test_data['accData'].append(instance.accData.numpy())
+                test_data['gyrData'].append(instance.gyrData.numpy())
+                test_data['label'].append(instance.label.numpy())
     else:
-        pass
+        _, target_user = strategy.split('_')
+        target_user = int(target_user)
+        for user_id, data in enumerate(merge_by_user_id):
+            if user_id + 1 == target_user:
+                # 加入测试集
+                for instance in data:
+                    assert instance.user_id == user_id + 1
+                    test_data['accData'].append(instance.accData.numpy())
+                    test_data['gyrData'].append(instance.gyrData.numpy())
+                    test_data['label'].append(instance.label.numpy())
+            else:
+                # 加入训练集
+                for instance in data:
+                    assert instance.user_id == user_id + 1
+                    train_data['accData'].append(instance.accData.numpy())
+                    train_data['gyrData'].append(instance.gyrData.numpy())
+                    train_data['label'].append(instance.label.numpy())
+
     for key, value in train_data.items():
         train_data[key] = np.array(value)
     for key, value in test_data.items():
         test_data[key] = np.array(value)
-    scio.savemat(os.path.join(output_dir, 'after_upsampling_%d' % seq_len, 'train.mat'), train_data)
-    scio.savemat(os.path.join(output_dir, 'after_upsampling_%d' % seq_len, 'test.mat'), test_data)
+
+    scio.savemat(os.path.join(output_dir, '%s_upsampling_%d' % (strategy, seq_len), 'train.mat'), train_data)
+    scio.savemat(os.path.join(output_dir, '%s_upsampling_%d' % (strategy, seq_len), 'test.mat'), test_data)
 
 
 if __name__ == '__main__':
+    strategy = 'user_1'
     datasource_path = os.path.join('F:/CODE/Python/watch_action_recognizer/data_source/transform_source')
     output_dir = os.path.join('F:/CODE/Python/watch_action_recognizer/data_source/')
-    preprocess_with_upsampling(datasource_path, output_dir)
+    preprocess_with_upsampling(datasource_path, output_dir, strategy, seq_len=224)
+
+    train_data = scio.loadmat(os.path.join(output_dir, '%s_upsampling_%d' % (strategy, 224), 'train.mat'))
+    test_data = scio.loadmat(os.path.join(output_dir, '%s_upsampling_%d' % (strategy, 224), 'test.mat'))
+
+    print(train_data['accData'].shape)
+    print(train_data['gyrData'].shape)
+    print(train_data['label'].shape)
+
+    print(test_data['accData'].shape)
+    print(test_data['gyrData'].shape)
+    print(test_data['label'].shape)
