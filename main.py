@@ -1,16 +1,23 @@
-# This is a sample Python script.
+import os
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+import scipy.io as scio
 
+from basic_config import BasicConfig
+from data_process import preprocess_with_upsampling, SensorDataset
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
-
-
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    print_hi('PyCharm')
+    basic_config = BasicConfig()
+    preprocess_with_upsampling(basic_config.datasource_path,
+                               basic_config.dataset_path,
+                               basic_config.preprocess_strategy,
+                               basic_config.train_test_ratio,
+                               basic_config.seq_len)
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    train_mat = scio.loadmat(os.path.join(basic_config.dataset_path,
+                                          '%s_upsampling_%d' % (basic_config.preprocess_strategy, basic_config.seq_len),
+                                          'train.mat'))
+    test_mat = scio.loadmat(os.path.join(basic_config.dataset_path,
+                                         '%s_upsampling_%d' % (basic_config.preprocess_strategy, basic_config.seq_len),
+                                         'test.mat'))
+    train_dataset = SensorDataset(train_mat)
+    test_dataset = SensorDataset(test_mat)
