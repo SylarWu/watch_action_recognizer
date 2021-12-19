@@ -5,9 +5,9 @@ from torch.utils.data.dataset import Dataset
 class SensorDataset(Dataset):
     def __init__(self, mat_data):
         super(SensorDataset, self).__init__()
-        self.accData = torch.from_numpy(mat_data['accData'])
-        self.gyrData = torch.from_numpy(mat_data['gyrData'])
-        self.label = torch.from_numpy(mat_data['label'])
+        self.accData = torch.from_numpy(mat_data['accData']).float()
+        self.gyrData = torch.from_numpy(mat_data['gyrData']).float()
+        self.label = torch.from_numpy(mat_data['label']).long()
 
         self.num_samples = self.accData.size(0)
         assert self.num_samples == self.gyrData.size(0)

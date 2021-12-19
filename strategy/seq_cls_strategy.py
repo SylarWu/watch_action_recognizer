@@ -1,5 +1,5 @@
-import torch
 import torch.nn as nn
+
 
 class SequenceCLSStrategy(nn.Module):
     def __init__(self, model: nn.Module, head: nn.Module):
@@ -12,6 +12,10 @@ class SequenceCLSStrategy(nn.Module):
     def forward(self, accData, gyrData, label):
         features = self.model(accData, gyrData)
 
-        logits = self.head(features)
+        logits = self.head(features.permute(0, 2, 1))
 
-        return self.loss_fn(logits, label)
+        batch_size = label.size(0)
+        seq_len = label.size(1)
+        label -= 1
+
+        return self.loss_fn(logits.view((batch_size * seq_len, -1)), label.view((batch_size * seq_len)))

@@ -100,19 +100,19 @@ class UpConv(nn.Module):
     上采样 + Conv
         输入数据维度 -> 输出数据维度:
         batch_size  -> batch_size
-        in_channel  -> out_channel
+        in_channels  -> out_channels
         seq_len     -> seq_len * 2
     """
 
     def __init__(self, in_channels, out_channels):
         super(UpConv, self).__init__()
+        self.in_conv = SimpleConv(in_channels, out_channels, kernel_size=3, stride=1, padding=1)
 
-        self.up = UpSample(in_channels, out_channels)
-        self.out_conv = SimpleConv(out_channels, out_channels, kernel_size=3, stride=1, padding=1)
+        self.up = UpSample(out_channels, out_channels // 2)
 
     def forward(self, x, before_x):
-        feature = torch.cat([before_x, x], dim=1)
-        return self.out_conv(self.up(feature))
+        x = torch.cat([before_x, x], dim=1)
+        return self.up(self.in_conv(x))
 
 
 class SpatialPyramidPooling(nn.Module):
@@ -144,11 +144,12 @@ class SPPConvUp(nn.Module):
         out_channels(int): 输出数据通道数
     """
 
-    def __init__(self, pool_sizes, in_channels, out_channels):
+    def __init__(self, pool_sizes, channels, bottleneck_factor):
         super(SPPConvUp, self).__init__()
         self.spp = SpatialPyramidPooling(pool_sizes)
         self.convs = nn.ModuleList(
-            [SimpleConv(in_channels, out_channels, kernel_size=1, stride=1, padding=0) for _ in range(len(pool_sizes))]
+            [SimpleConv(channels, channels // bottleneck_factor, kernel_size=1, stride=1, padding=0)
+             for _ in range(len(pool_sizes))]
         )
         self.ups = nn.ModuleList(
             [nn.Upsample(scale_factor=size, mode="nearest") for size in pool_sizes]
@@ -186,43 +187,54 @@ class SELayer(nn.Module):
 
 
 class CoreUNet(nn.Module):
-    def __init__(self, in_channels, out_channels, pool_sizes, bottom_channels, num_layers=3):
+    def __init__(self, in_channels, out_channels, pool_sizes, bottleneck_factor, num_layers=3):
         super(CoreUNet, self).__init__()
 
         factors = [int(2 ** i) for i in range(num_layers)]
 
-        self.in_conv = SimpleConv(in_channels, out_channels)
+        self.in_conv = SimpleConv(in_channels, out_channels, kernel_size=1, stride=1, padding=0)
 
+        # c, s -> c * 2, s // 2
+        # c * 2, s // 2 -> c * 4, s // 4
+        # c * 4, s // 4 -> c * 8, s // 8
         self.downs = nn.ModuleList(
             [DownConv(out_channels * factor) for factor in factors]
         )
 
-        self.spp = SPPConvUp(pool_sizes, out_channels * int(2 ** num_layers), bottom_channels)
+        # c * 8, s // 8 -> c * 8 // bottleneck_factor * len(pool_sizes), s // 8
+        self.spp = SPPConvUp(pool_sizes, out_channels * int(2 ** num_layers), bottleneck_factor)
 
         self.ups = nn.ModuleList(
-            [UpConv(bottom_channels * num_layers + out_channels * factor * 2, out_channels * factor) if i == 0
-             else UpConv(out_channels * factor * 4, out_channels * factor)
+            [UpConv(out_channels * factor * 2 // bottleneck_factor * len(pool_sizes) + out_channels * factor * 2,
+                    out_channels * factor * 2) if i == 0
+             else UpConv(out_channels * factor * 4, out_channels * factor * 2)
              for i, factor in enumerate(factors[::-1])]
         )
 
         factors.append(int(2 ** num_layers))
+
         self.skips = nn.ModuleList(
             [SimpleConv(out_channels * factor, out_channels * factor, kernel_size=1, stride=1, padding=0)
-             for factor in factors[::-1]]
+             for factor in factors]
         )
 
     def forward(self, x):
         x = self.in_conv(x)
-        before_x = x
-        features = []
+        features = [x]
         for down in self.downs:
             x = down(x)
             features.append(x)
 
         x = self.spp(x)
 
-        for feature, up, skip in zip(features[::-1], self.ups, self.skips):
-            x = up(x, skip(feature))
+        for index, feature in enumerate(features):
+            features[index] = self.skips[index](feature)
+
+        before_x = features[0]
+        features = features[::-1]
+
+        for index, up in enumerate(self.ups):
+            x = up(x, features[index])
 
         x = torch.cat([before_x, x], dim=1)
         return x
@@ -231,24 +243,27 @@ class CoreUNet(nn.Module):
 class SPPUNet(nn.Module):
     def __init__(self, config: UNetConfig):
         super(SPPUNet, self).__init__()
-        self.acc_spp_unet = CoreUNet(config.n_axis, config.init_channels, config.pool_sizes, config.bottom_channels)
+        self.acc_spp_unet = CoreUNet(config.n_axis, config.init_channels, config.pool_sizes, config.bottleneck_factor)
         self.acc_attention = SELayer(config.init_channels * 2)
 
-        self.gyr_spp_unet = CoreUNet(config.n_axis, config.init_channels, config.pool_sizes, config.bottom_channels)
+        self.gyr_spp_unet = CoreUNet(config.n_axis, config.init_channels, config.pool_sizes, config.bottleneck_factor)
         self.gyr_attention = SELayer(config.init_channels * 2)
 
         self.out = nn.Sequential(
-            SimpleConv(config.init_channels * 2 * 2, config.init_channels * 2 * 2, kernel_size=3, stride=1, padding=1),
-            nn.Conv1d(config.init_channels * 2 * 2, config.n_classes, kernel_size=1, stride=1, padding=0)
+            SimpleConv(config.init_channels * 2 * 2, config.init_channels * 2 * 2, kernel_size=1, stride=1, padding=0),
         )
 
-    def forward(self, x):
-        acc, gyr = x
-        acc = self.acc_spp_unet(acc)
-        acc = self.acc_attention(acc)
+    def forward(self, accData, gyrData):
+        accData = self.acc_spp_unet(accData)
+        accData = self.acc_attention(accData)
 
-        gyr = self.gyr_spp_unet(gyr)
-        gyr = self.gyr_attention(gyr)
+        gyrData = self.gyr_spp_unet(gyrData)
+        gyrData = self.gyr_attention(gyrData)
 
-        x = torch.cat([acc, gyr], dim=1)
+        x = torch.cat([accData, gyrData], dim=1)
         return self.out(x)
+
+
+if __name__ == '__main__':
+    factors = [int(2 ** i) for i in range(3)]
+    print(factors)

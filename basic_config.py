@@ -6,7 +6,7 @@ class BasicConfig(object):
         # 数据预处理脚本config
         self.datasource_path = os.path.join(os.getcwd(), 'data_source', 'transform_source')
         self.dataset_path = os.path.join(os.getcwd(), 'data_source')
-        self.preprocess_strategy = 'normal'
+        self.preprocess_strategy = 'normal_0'
         self.seq_len = 224
         self.train_test_ratio = [0.8, 0.2]
 
@@ -28,3 +28,6 @@ class BasicConfig(object):
         self.model_name = 'unet'
         self.head_name = 'seq_cls'
         self.strategy_name = 'seq_cls'
+
+        self.hidden_dim = 16 * 4
+        self.n_classes = 18

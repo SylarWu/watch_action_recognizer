@@ -1,5 +1,5 @@
 import os.path
-
+from tqdm import tqdm
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
@@ -86,14 +86,14 @@ class Trainer(object):
             self.strategy.train()
             log_info = 'Epoch: %d. ' % (epoch + 1)
             train_loss = 0
-            for data in self.train_data_loader:
+            for data in tqdm(self.train_data_loader):
                 data = self._to_var(data)
                 train_loss += self._train_one_step(data)
             log_info += 'Train Loss: %f. ' % train_loss
             self.strategy.eval()
             if (epoch + 1) % self.eval_epoch == 0:
                 eval_loss = 0
-                for data in self.eval_data_loader:
+                for data in tqdm(self.eval_data_loader):
                     data = self._to_var(data)
                     eval_loss += self.strategy(data[0], data[1], data[2])
                 log_info += 'Eval Loss: %f.' % eval_loss
@@ -102,6 +102,7 @@ class Trainer(object):
                            os.path.join(self.check_point_path, '%s_%s_%d' % (self.strategy.model.__class__,
                                                                              self.strategy.head.__class__,
                                                                              epoch + 1)))
+            print(log_info)
         torch.save(self.strategy.state_dict(),
                    os.path.join(self.check_point_path, '%s_%s_final' % (self.strategy.model.__class__,
                                                                         self.strategy.head.__class__)))

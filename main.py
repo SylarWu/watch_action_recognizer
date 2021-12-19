@@ -23,7 +23,7 @@ def _init_head(config: BasicConfig):
 def _init_strategy(config: BasicConfig):
     model = _init_model(config)
     head = _init_head(config)
-    if strategy == 'seq_cls':
+    if config.strategy_name == 'seq_cls':
         from strategy import SequenceCLSStrategy
         return SequenceCLSStrategy(model, head)
 
