@@ -99,10 +99,10 @@ class Trainer(object):
                 log_info += 'Eval Loss: %f.' % eval_loss
             if (epoch + 1) % self.save_epoch == 0:
                 torch.save(self.strategy.state_dict(),
-                           os.path.join(self.check_point_path, '%s_%s_%d' % (self.strategy.model.__class__,
-                                                                             self.strategy.head.__class__,
+                           os.path.join(self.check_point_path, '%s_%s_%d' % (self.strategy.model.__class__.__name__,
+                                                                             self.strategy.head.__class__.__name__,
                                                                              epoch + 1)))
             print(log_info)
         torch.save(self.strategy.state_dict(),
-                   os.path.join(self.check_point_path, '%s_%s_final' % (self.strategy.model.__class__,
-                                                                        self.strategy.head.__class__)))
+                   os.path.join(self.check_point_path, '%s_%s_final' % (self.strategy.model.__class__.__name__,
+                                                                        self.strategy.head.__class__.__name__)))

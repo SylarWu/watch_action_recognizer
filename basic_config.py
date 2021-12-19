@@ -18,7 +18,7 @@ class BasicConfig(object):
         self.lr_rate = 5e-4
         self.weight_decay = 1e-4
         self.save_epoch = 100
-        self.eval_epoch = 20
+        self.eval_epoch = 1
         self.check_point_path = os.path.join(os.path.join(os.getcwd(), 'log'))
         self.use_gpu = True
 
