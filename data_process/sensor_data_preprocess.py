@@ -35,8 +35,8 @@ def preprocess_with_upsampling(datasource_path: os.path,
     :param datasource_path: 数据源路径
     :param output_dir: 输出路径
     :param strategy: 制作数据策略: normal/user_independent/shuffle/
-        normal: train到所有人的动作
-        user_i: test第i人，其余人数据进行train
+        normal_i: test第i*2 ~ i*2 + 1次尝试，其余尝试数据进行训练，i：0~4
+        user_i: test第i人，其余人数据进行train，i：1~10
         shuffle: 随机shuffle，上面两种的折衷
     :param ratio: train/test比例
     :param seq_len: 固定长度
@@ -81,9 +81,11 @@ def preprocess_with_upsampling(datasource_path: os.path,
         'gyrData': list(),
         'label': list(),
     }
-    if strategy == 'normal':
+    if strategy.startswith("normal_"):
+        _, target_attempt = strategy.split('_')
+        target_attempt = int(target_attempt)
         for attempt_id, data in enumerate(merge_by_attempt_id):
-            if (attempt_id + 1) % 5 == 0:
+            if attempt_id // 2 == target_attempt:
                 # 加入测试集
                 for instance in data:
                     assert instance.attempt_id == attempt_id
@@ -143,7 +145,7 @@ def preprocess_with_upsampling(datasource_path: os.path,
 
 
 if __name__ == '__main__':
-    strategy = 'user_1'
+    strategy = 'normal_4'
     datasource_path = os.path.join('F:/CODE/Python/watch_action_recognizer/data_source/transform_source')
     output_dir = os.path.join('F:/CODE/Python/watch_action_recognizer/data_source/')
     preprocess_with_upsampling(datasource_path, output_dir, strategy, seq_len=224)
