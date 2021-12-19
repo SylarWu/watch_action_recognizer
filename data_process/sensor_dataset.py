@@ -24,7 +24,7 @@ class SensorDataset(Dataset):
                                                                                                    keepdim=True)
 
     def __getitem__(self, index):
-        return (self.accData[index], self.gyrData[index], self.label[index])
+        return self.accData[index], self.gyrData[index], self.label[index]
 
     def __len__(self):
         return self.num_samples
