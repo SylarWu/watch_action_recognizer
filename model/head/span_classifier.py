@@ -1,9 +1,9 @@
 import torch.nn as nn
 
 
-class SequenceClassifier(nn.Module):
+class SpanClassifier(nn.Module):
     def __init__(self, hidden_dim, n_classes):
-        super(SequenceClassifier, self).__init__()
+        super(SpanClassifier, self).__init__()
 
         self.head = nn.Linear(hidden_dim, n_classes, bias=False)
 
