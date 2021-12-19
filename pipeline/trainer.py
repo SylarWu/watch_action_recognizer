@@ -104,4 +104,4 @@ class Trainer(object):
                                                                              epoch + 1)))
         torch.save(self.strategy.state_dict(),
                    os.path.join(self.check_point_path, '%s_%s_final' % (self.strategy.model.__class__,
-                                                                     self.strategy.head.__class__)))
+                                                                        self.strategy.head.__class__)))
