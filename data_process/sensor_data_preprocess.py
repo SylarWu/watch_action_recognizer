@@ -59,7 +59,7 @@ def preprocess_with_upsampling(datasource_path: os.path,
 
         acc = F.interpolate(torch.from_numpy(origin_mat['accData']), size=(factor * seq_len), mode='linear')
         gyr = F.interpolate(torch.from_numpy(origin_mat['gyrData']), size=(factor * seq_len), mode='linear')
-        label = origin_mat['label'][0][0] * torch.ones((1, factor * seq_len))
+        label = (origin_mat['label'][0][0] - 1) * torch.ones((1, factor * seq_len))
 
         for i in range(factor):
             sensor_data = SensorData(user_id=int(user_id),

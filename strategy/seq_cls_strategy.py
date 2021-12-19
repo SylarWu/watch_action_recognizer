@@ -16,6 +16,5 @@ class SequenceCLSStrategy(nn.Module):
 
         batch_size = label.size(0)
         seq_len = label.size(1)
-        label -= 1
 
         return self.loss_fn(logits.view((batch_size * seq_len, -1)), label.view((batch_size * seq_len)))
