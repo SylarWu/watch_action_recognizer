@@ -6,7 +6,7 @@ class BasicConfig(object):
         # 数据预处理脚本config
         self.datasource_path = os.path.join(os.getcwd(), 'data_source', 'transform_source')
         self.dataset_path = os.path.join(os.getcwd(), 'data_source')
-        self.preprocess_strategy = 'normal_0'
+        self.preprocess_strategy = 'normal_4'
         self.seq_len = 224
         self.train_test_ratio = [0.8, 0.2]
 

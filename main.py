@@ -1,4 +1,6 @@
+import logging
 import os
+
 import scipy.io as scio
 from torch.utils.data.dataloader import DataLoader
 
@@ -6,6 +8,7 @@ from basic_config import BasicConfig
 from data_process import preprocess_with_upsampling, SensorDataset
 from pipeline import Trainer
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s-%(filename)s-%(levelname)s: %(message)s')
 
 def _init_model(config: BasicConfig):
     if config.model_name == 'unet':
