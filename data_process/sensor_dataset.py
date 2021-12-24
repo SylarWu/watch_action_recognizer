@@ -13,7 +13,7 @@ class SensorDataset(Dataset):
         assert self.num_samples == self.gyrData.size(0)
         assert self.num_samples == self.label.size(0)
 
-        self._transform()
+        # self._transform()
 
     def _transform(self):
         # 加速度数据中心化

@@ -1,12 +1,14 @@
+import logging
 import os
 import random
 
-import numpy as np
 import scipy.io as scio
 import torch
 import torch.nn.functional as F
 
 from data_process.sensor_data import SensorData
+
+logger = logging.getLogger(__name__)
 
 
 def _init_config(datasource_path: os.path):
@@ -27,7 +29,7 @@ def _init_config(datasource_path: os.path):
 
 def preprocess_with_upsampling(datasource_path: os.path,
                                output_dir: os.path,
-                               strategy: str = 'normal',
+                               strategy: str = 'normal_0',
                                ratio: list = [0.8, 0.2],
                                seq_len: int = 224):
     """
@@ -44,9 +46,13 @@ def preprocess_with_upsampling(datasource_path: os.path,
     """
     if not os.path.exists(os.path.join(output_dir, '%s_upsampling_%d' % (strategy, seq_len))):
         os.makedirs(os.path.join(output_dir, '%s_upsampling_%d' % (strategy, seq_len)))
-    # 初试化源数据参数
+
+    logger.info("初试化源数据参数")
+
     users, actions, attempts, file_path_list = _init_config(datasource_path)
-    # 首先对所有数据进行上采样到固定长度，超过固定长度的上采样到固定长度的倍数
+
+    logger.info("开始对数据进行上采样到固定长度: %d" % seq_len)
+
     merge_by_user_id = [list() for _ in users]
     merge_by_attempt_id = [list() for _ in attempts]
     for file_path in file_path_list:
@@ -65,12 +71,14 @@ def preprocess_with_upsampling(datasource_path: os.path,
             sensor_data = SensorData(user_id=int(user_id),
                                      action_id=int(action_id),
                                      attempt_id=int(attempt_id),
-                                     accData=acc[0, :, i * seq_len:(i + 1) * seq_len],
-                                     gyrData=gyr[0, :, i * seq_len:(i + 1) * seq_len],
-                                     label=label[0, i * seq_len:(i + 1) * seq_len])
+                                     accData=acc[:, :, i * seq_len:(i + 1) * seq_len],
+                                     gyrData=gyr[:, :, i * seq_len:(i + 1) * seq_len],
+                                     label=label[:, i * seq_len:(i + 1) * seq_len])
             merge_by_user_id[sensor_data.user_id - 1].append(sensor_data)
             merge_by_attempt_id[sensor_data.attempt_id].append(sensor_data)
-    # 上采样完成，开始基于策略对数据进行划分
+
+    logger.info("上采样完成，开始基于策略对数据进行划分: %s" % strategy)
+
     train_data = {
         'accData': list(),
         'gyrData': list(),
@@ -89,17 +97,16 @@ def preprocess_with_upsampling(datasource_path: os.path,
                 # 加入测试集
                 for instance in data:
                     assert instance.attempt_id == attempt_id
-                    test_data['accData'].append(instance.accData.numpy())
-                    test_data['gyrData'].append(instance.gyrData.numpy())
-                    test_data['label'].append(instance.label.numpy())
+                    test_data['accData'].append(instance.accData)
+                    test_data['gyrData'].append(instance.gyrData)
+                    test_data['label'].append(instance.label)
             else:
                 # 加入训练集
                 for instance in data:
                     assert instance.attempt_id == attempt_id
-                    train_data['accData'].append(instance.accData.numpy())
-                    train_data['gyrData'].append(instance.gyrData.numpy())
-                    train_data['label'].append(instance.label.numpy())
-
+                    train_data['accData'].append(instance.accData)
+                    train_data['gyrData'].append(instance.gyrData)
+                    train_data['label'].append(instance.label)
     elif strategy == 'shuffle':
         for attempt_id, data in enumerate(merge_by_attempt_id):
             # 先shuffle
@@ -107,15 +114,15 @@ def preprocess_with_upsampling(datasource_path: os.path,
             # 前ratio[0]加入训练集
             for instance in data[:int(len(data) * ratio[0])]:
                 assert instance.attempt_id == attempt_id
-                train_data['accData'].append(instance.accData.numpy())
-                train_data['gyrData'].append(instance.gyrData.numpy())
-                train_data['label'].append(instance.label.numpy())
+                train_data['accData'].append(instance.accData)
+                train_data['gyrData'].append(instance.gyrData)
+                train_data['label'].append(instance.label)
             # 后ratio[1]加入测试集
             for instance in data[int(len(data) * ratio[0]):]:
                 assert instance.attempt_id == attempt_id
-                test_data['accData'].append(instance.accData.numpy())
-                test_data['gyrData'].append(instance.gyrData.numpy())
-                test_data['label'].append(instance.label.numpy())
+                test_data['accData'].append(instance.accData)
+                test_data['gyrData'].append(instance.gyrData)
+                test_data['label'].append(instance.label)
     else:
         _, target_user = strategy.split('_')
         target_user = int(target_user)
@@ -124,39 +131,49 @@ def preprocess_with_upsampling(datasource_path: os.path,
                 # 加入测试集
                 for instance in data:
                     assert instance.user_id == user_id + 1
-                    test_data['accData'].append(instance.accData.numpy())
-                    test_data['gyrData'].append(instance.gyrData.numpy())
-                    test_data['label'].append(instance.label.numpy())
+                    test_data['accData'].append(instance.accData)
+                    test_data['gyrData'].append(instance.gyrData)
+                    test_data['label'].append(instance.label)
             else:
                 # 加入训练集
                 for instance in data:
                     assert instance.user_id == user_id + 1
-                    train_data['accData'].append(instance.accData.numpy())
-                    train_data['gyrData'].append(instance.gyrData.numpy())
-                    train_data['label'].append(instance.label.numpy())
-
+                    train_data['accData'].append(instance.accData)
+                    train_data['gyrData'].append(instance.gyrData)
+                    train_data['label'].append(instance.label)
     for key, value in train_data.items():
-        train_data[key] = np.array(value)
+        train_data[key] = torch.vstack(value)
     for key, value in test_data.items():
-        test_data[key] = np.array(value)
+        test_data[key] = torch.vstack(value)
+
+    logger.info("对数据进行归一化")
+    _normalize(train_data, test_data)
+
+    logger.info("数据集生成完成，保存")
 
     scio.savemat(os.path.join(output_dir, '%s_upsampling_%d' % (strategy, seq_len), 'train.mat'), train_data)
     scio.savemat(os.path.join(output_dir, '%s_upsampling_%d' % (strategy, seq_len), 'test.mat'), test_data)
 
 
+def _normalize(train_data, test_data):
+    train_len = train_data['label'].size(0)
+    test_len = test_data['label'].size(0)
+
+    accData = torch.vstack([train_data['accData'], test_data['accData']])
+    assert accData.size(0) == train_len + test_len
+    accData = (accData - torch.mean(accData, dim=-1, keepdim=True)) / torch.std(accData, dim=-1, keepdim=True)
+    train_data['accData'] = accData[:train_len, :, :]
+    test_data['accData'] = accData[train_len:, :, :]
+
+    gyrData = torch.vstack([train_data['gyrData'], test_data['gyrData']])
+    assert gyrData.size(0) == train_len + test_len
+    gyrData = (gyrData - torch.mean(gyrData, dim=-1, keepdim=True)) / torch.std(gyrData, dim=-1, keepdim=True)
+    train_data['gyrData'] = gyrData[:train_len, :, :]
+    test_data['gyrData'] = gyrData[train_len:, :, :]
+
+
 if __name__ == '__main__':
-    strategy = 'normal_4'
+    strategy = 'normal_0'
     datasource_path = os.path.join('F:/CODE/Python/watch_action_recognizer/data_source/transform_source')
     output_dir = os.path.join('F:/CODE/Python/watch_action_recognizer/data_source/')
     preprocess_with_upsampling(datasource_path, output_dir, strategy, seq_len=224)
-
-    train_data = scio.loadmat(os.path.join(output_dir, '%s_upsampling_%d' % (strategy, 224), 'train.mat'))
-    test_data = scio.loadmat(os.path.join(output_dir, '%s_upsampling_%d' % (strategy, 224), 'test.mat'))
-
-    print(train_data['accData'].shape)
-    print(train_data['gyrData'].shape)
-    print(train_data['label'].shape)
-
-    print(test_data['accData'].shape)
-    print(test_data['gyrData'].shape)
-    print(test_data['label'].shape)
