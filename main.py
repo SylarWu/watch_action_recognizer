@@ -10,25 +10,29 @@ from pipeline import Trainer
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s-%(filename)s-%(levelname)s: %(message)s')
 
-def _init_model(config: BasicConfig):
-    if config.model_name == 'unet':
-        from model import SPPUNet, UNetConfig
-        return SPPUNet(UNetConfig())
+logger = logging.getLogger(__name__)
+
+def _init_model(model_name):
+    logger.info('初试化模型')
+    if model_name.startswith('resnet'):
+        from model import resnet, ResNetConfig
+        return resnet(model_name, ResNetConfig())
 
 
-def _init_head(config: BasicConfig):
-    if config.head_name == 'seq_cls':
-        from model import SequenceClassifier
-        return SequenceClassifier(hidden_dim=config.hidden_dim,
-                                  n_classes=config.n_classes)
+def _init_head(head_name, hidden_dim, n_classes):
+    logger.info('初试化预测头')
+    if head_name == 'span_cls':
+        from model import SpanClassifier
+        return SpanClassifier(hidden_dim, n_classes)
 
 
 def _init_strategy(config: BasicConfig):
-    model = _init_model(config)
-    head = _init_head(config)
-    if config.strategy_name == 'seq_cls':
-        from strategy import SequenceCLSStrategy
-        return SequenceCLSStrategy(model, head)
+    logger.info('初试化训练策略')
+    model = _init_model(config.model_name)
+    head = _init_head(config.head_name, model.get_output_size(), config.n_classes)
+    if config.strategy_name == 'span_cls':
+        from strategy import SpanCLSStrategy
+        return SpanCLSStrategy(model, head)
 
 
 if __name__ == '__main__':
@@ -52,7 +56,8 @@ if __name__ == '__main__':
 
     trainer = Trainer(
         strategy=strategy,
-        train_data_loader=DataLoader(train_dataset, batch_size=basic_config.train_batch_size, shuffle=True, drop_last=True),
+        train_data_loader=DataLoader(train_dataset, batch_size=basic_config.train_batch_size, shuffle=True,
+                                     drop_last=True),
         eval_data_loader=DataLoader(test_dataset, batch_size=basic_config.eval_batch_size, shuffle=False),
         num_epoch=basic_config.num_epoch,
         opt_method=basic_config.opt_method,

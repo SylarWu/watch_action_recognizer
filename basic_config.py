@@ -25,9 +25,8 @@ class BasicConfig(object):
         self.eval_batch_size = 16
 
         # model/head/strategy
-        self.model_name = 'unet'
-        self.head_name = 'seq_cls'
-        self.strategy_name = 'seq_cls'
+        self.model_name = 'resnet18'
+        self.head_name = 'span_cls'
+        self.strategy_name = 'span_cls'
 
-        self.hidden_dim = 16 * 4
         self.n_classes = 18
