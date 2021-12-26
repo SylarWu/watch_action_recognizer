@@ -152,7 +152,7 @@ def preprocess_with_upsampling(datasource_path: os.path,
 
     for key, value in train_data.items():
         train_data[key] = numpy.array(value)
-    for key, value in train_data.items():
+    for key, value in test_data.items():
         test_data[key] = numpy.array(value)
 
     logger.info("数据集生成完成，保存")

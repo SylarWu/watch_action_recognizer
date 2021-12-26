@@ -13,6 +13,7 @@ class SensorDataset(Dataset):
         self.accData = torch.from_numpy(mat_data['accData']).float()
         self.gyrData = torch.from_numpy(mat_data['gyrData']).float()
         self.label = torch.from_numpy(mat_data['label']).long()
+        print(self.accData.size())
 
         self.num_samples = self.accData.size(0)
         assert self.num_samples == self.gyrData.size(0)
