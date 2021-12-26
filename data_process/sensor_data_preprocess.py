@@ -2,6 +2,7 @@ import logging
 import os
 import random
 
+import numpy
 import scipy.io as scio
 import torch
 import torch.nn.functional as F
@@ -149,8 +150,12 @@ def preprocess_with_upsampling(datasource_path: os.path,
     logger.info("对数据进行归一化")
     _normalize(train_data, test_data)
 
-    logger.info("数据集生成完成，保存")
+    for key, value in train_data.items():
+        train_data[key] = numpy.array(value)
+    for key, value in train_data.items():
+        test_data[key] = numpy.array(value)
 
+    logger.info("数据集生成完成，保存")
     scio.savemat(os.path.join(output_dir, '%s_upsampling_%d' % (strategy, seq_len), 'train.mat'), train_data)
     scio.savemat(os.path.join(output_dir, '%s_upsampling_%d' % (strategy, seq_len), 'test.mat'), test_data)
 

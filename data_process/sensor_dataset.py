@@ -1,10 +1,15 @@
+import logging
 import torch
 from torch.utils.data.dataset import Dataset
 
+logger = logging.getLogger(__name__)
 
 class SensorDataset(Dataset):
     def __init__(self, mat_data):
         super(SensorDataset, self).__init__()
+
+        logger.info('加载数据集')
+
         self.accData = torch.from_numpy(mat_data['accData']).float()
         self.gyrData = torch.from_numpy(mat_data['gyrData']).float()
         self.label = torch.from_numpy(mat_data['label']).long()
