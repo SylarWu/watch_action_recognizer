@@ -1,5 +1,5 @@
-from strategy.seq_cls_strategy import SequenceCLSStrategy
+from strategy.span_cls_strategy import SpanCLSStrategy
 
 __all__ = [
-    SequenceCLSStrategy,
+    SpanCLSStrategy,
 ]

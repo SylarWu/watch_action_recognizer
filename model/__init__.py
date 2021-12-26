@@ -1,9 +1,9 @@
-from model.backbone import SPPUNet
-from model.config import UNetConfig
-from model.head import SequenceClassifier
+from model.backbone import resnet
+from model.config import ResNetConfig
+from model.head import SpanClassifier
 
 __all__ = [
-    SPPUNet,
-    UNetConfig,
-    SequenceClassifier,
+    resnet,
+    ResNetConfig,
+    SpanClassifier,
 ]

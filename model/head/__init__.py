@@ -1,5 +1,5 @@
-from model.head.seqence_classifier import SequenceClassifier
+from model.head.span_classifier import SpanClassifier
 
 __all__ = [
-    SequenceClassifier,
+    SpanClassifier,
 ]

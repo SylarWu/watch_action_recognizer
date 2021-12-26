@@ -1,5 +1,5 @@
-from model.backbone.unet import SPPUNet
+from model.backbone.resnet import resnet
 
 __all__ = [
-    SPPUNet,
+    resnet,
 ]
