@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class SpanCLSStrategy(nn.Module):
@@ -18,3 +19,12 @@ class SpanCLSStrategy(nn.Module):
         logits = self.head(features)
 
         return self.loss_fn(logits, label[:, 0])
+
+    def predict(self, accData, gyrData):
+        data = torch.cat([accData, gyrData], dim=1)
+
+        features = self.model(data)
+
+        logits = self.head(features)
+
+        return F.softmax(logits, dim=-1)

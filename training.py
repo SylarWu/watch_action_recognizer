@@ -6,7 +6,7 @@ from torch.utils.data.dataloader import DataLoader
 
 from basic_config import BasicConfig
 from data_process import preprocess_with_upsampling, SensorDataset
-from pipeline import Trainer
+from pipeline import Trainer, Tester
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s-%(filename)s-%(levelname)s: %(message)s')
 

@@ -90,12 +90,14 @@ class Trainer(object):
                 data = self._to_var(data)
                 train_loss += self._train_one_step(data)
             log_info += 'Train Loss: %f. ' % train_loss
-            self.strategy.eval()
+
             if (epoch + 1) % self.eval_epoch == 0:
-                eval_loss = 0
-                for data in tqdm(self.eval_data_loader):
-                    data = self._to_var(data)
-                    eval_loss += self.strategy(data[0], data[1], data[2])
+                self.strategy.eval()
+                with torch.no_grad():
+                    eval_loss = 0
+                    for data in tqdm(self.eval_data_loader):
+                        data = self._to_var(data)
+                        eval_loss += self.strategy(data[0], data[1], data[2])
                 log_info += 'Eval Loss: %f.' % eval_loss
             if (epoch + 1) % self.save_epoch == 0:
                 torch.save(self.strategy.state_dict(),
