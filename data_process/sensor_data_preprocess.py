@@ -1,3 +1,4 @@
+import argparse
 import logging
 import os
 import random
@@ -9,7 +10,26 @@ import torch.nn.functional as F
 
 from data_process.sensor_data import SensorData
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s-%(filename)s-%(levelname)s: %(message)s')
+
 logger = logging.getLogger(__name__)
+
+parser = argparse.ArgumentParser(description="数据预处理：在序列轴上进行上采样到固定长度，依据不同策略切分数据成训练/测试集")
+
+parser.add_argument("-i", '--input', dest="input_path", required=True, type=str,
+                    help="数据源路径")
+
+parser.add_argument("-o", '--output', dest="output_path", required=True, type=str,
+                    help="数据经过转换后输出路径")
+
+parser.add_argument("-s", '--strategy', dest="strategy", required=True, type=str,
+                    help="制作数据策略：normal_i(0-4)/user_i(1-10)/shuffle")
+
+parser.add_argument("-s", '--length', dest="seq_len", required=True, type=int,
+                    help="经过处理后序列长度")
+
+parser.add_argument("-n", '--normalize', dest="is_normalize", required=True, type=bool,
+                    help="是否对数据进行预归一化处理")
 
 
 def _init_config(datasource_path: os.path):
@@ -32,7 +52,8 @@ def preprocess_with_upsampling(datasource_path: os.path,
                                output_dir: os.path,
                                strategy: str = 'normal_0',
                                ratio: list = [0.8, 0.2],
-                               seq_len: int = 224):
+                               seq_len: int = 224,
+                               is_nomalize: bool = False):
     """
     在序列轴上进行上采样到固定长度，依据不同策略切分数据成训练/测试集
     :param datasource_path: 数据源路径
@@ -59,7 +80,6 @@ def preprocess_with_upsampling(datasource_path: os.path,
     for file_path in file_path_list:
         user_id, action_id, attempt_id = file_path.split('.')[0].split('_')
         origin_mat = scio.loadmat(os.path.join(datasource_path, file_path))
-
         length = origin_mat['label'].shape[1]
         factor = length // seq_len + 1
         assert origin_mat['label'][0][0] == int(action_id)
@@ -109,6 +129,7 @@ def preprocess_with_upsampling(datasource_path: os.path,
                     train_data['gyrData'].append(instance.gyrData)
                     train_data['label'].append(instance.label)
     elif strategy == 'shuffle':
+        assert len(ratio) == 2
         for attempt_id, data in enumerate(merge_by_attempt_id):
             # 先shuffle
             random.shuffle(data)
@@ -147,8 +168,9 @@ def preprocess_with_upsampling(datasource_path: os.path,
     for key, value in test_data.items():
         test_data[key] = torch.vstack(value)
 
-    logger.info("对数据进行归一化")
-    _normalize(train_data, test_data)
+    if is_nomalize:
+        logger.info("对数据进行归一化")
+        _normalize(train_data, test_data)
 
     for key, value in train_data.items():
         train_data[key] = numpy.array(value)
@@ -178,7 +200,10 @@ def _normalize(train_data, test_data):
 
 
 if __name__ == '__main__':
-    strategy = 'normal_0'
-    datasource_path = os.path.join('F:/CODE/Python/watch_action_recognizer/data_source/transform_source')
-    output_dir = os.path.join('F:/CODE/Python/watch_action_recognizer/data_source/')
-    preprocess_with_upsampling(datasource_path, output_dir, strategy, seq_len=224)
+    args = parser.parse_args()
+    preprocess_with_upsampling(datasource_path=args['input_path'],
+                               output_dir=args['output_path'],
+                               strategy=args['strategy'],
+                               ratio=[0.8, 0.2],
+                               seq_len=args['seq_len'],
+                               is_nomalize=args['is_normalize'])
