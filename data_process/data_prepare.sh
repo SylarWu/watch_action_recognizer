@@ -1,2 +1,0 @@
-python sensor_data_pre_process.py --input 'F:/code/Project/watch_action_recognizer/data_source/transform_source' \
---output 'F:/code/Project/watch_action_recognizer/data_source' --strategy normal_0 --length 224 --nomalize True

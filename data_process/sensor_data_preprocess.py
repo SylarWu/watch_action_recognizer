@@ -8,7 +8,7 @@ import scipy.io as scio
 import torch
 import torch.nn.functional as F
 
-from data_process.sensor_data import SensorData
+from sensor_data import SensorData
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s-%(filename)s-%(levelname)s: %(message)s')
 
@@ -25,7 +25,7 @@ parser.add_argument("-o", '--output', dest="output_path", required=True, type=st
 parser.add_argument("-s", '--strategy', dest="strategy", required=True, type=str,
                     help="制作数据策略：normal_i(0-4)/user_i(1-10)/shuffle")
 
-parser.add_argument("-s", '--length', dest="seq_len", required=True, type=int,
+parser.add_argument("-l", '--length', dest="seq_len", required=True, type=int,
                     help="经过处理后序列长度")
 
 parser.add_argument("-n", '--normalize', dest="is_normalize", required=True, type=bool,
@@ -201,9 +201,9 @@ def _normalize(train_data, test_data):
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    preprocess_with_upsampling(datasource_path=args['input_path'],
-                               output_dir=args['output_path'],
-                               strategy=args['strategy'],
+    preprocess_with_upsampling(datasource_path=args.input_path,
+                               output_dir=args.output_path,
+                               strategy=args.strategy,
                                ratio=[0.8, 0.2],
-                               seq_len=args['seq_len'],
-                               is_nomalize=args['is_normalize'])
+                               seq_len=args.seq_len,
+                               is_nomalize=args.is_normalize)
