@@ -1,3 +1,5 @@
+#!/bin/bash
+
 datasource_path="/data/wuxilei/watch_action_recognizer/transform_source"
 output_path="/data/wuxilei/watch_action_recognizer"
 seq_len=224
