@@ -1,16 +1,99 @@
-import logging
 import os
+import logging
+import argparse
 
 import scipy.io as scio
+import torch.cuda
 from torch.utils.data.dataloader import DataLoader
 
 from basic_config import BasicConfig
-from data_process import preprocess_with_upsampling, SensorDataset
-from pipeline import Trainer, Tester
+from data_process import SensorDataset
+from pipeline import Trainer
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s-%(filename)s-%(levelname)s: %(message)s')
 
 logger = logging.getLogger(__name__)
+
+
+def _init_configs() -> BasicConfig:
+    parser = argparse.ArgumentParser(description="模型训练")
+
+    parser.add_argument('--dataset_path', dest="dataset_path", required=True, type=str,
+                        help="包含train.mat/test.mat数据集路径")
+
+    parser.add_argument('--preprocess_strategy', dest="preprocess_strategy", required=True, type=str,
+                        help="预处理数据集策略，基于此加载相应的数据集：normal_i(0-4)/user_i(1-10)/shuffle")
+
+    parser.add_argument('--seq_len', dest="seq_len", required=False, type=int, default=224,
+                        help="数据集经过处理后序列长度")
+
+    parser.add_argument('--train_batch_size', dest="train_batch_size", required=False, type=int, default=64,
+                        help="训练使用batch_size")
+
+    parser.add_argument('--test_batch_size', dest="test_batch_size", required=False, type=int, default=64,
+                        help="测试/验证使用batch_size")
+
+    parser.add_argument('--num_epoch', dest="num_epoch", required=False, type=int, default=1000,
+                        help="训练epoch")
+
+    parser.add_argument('--opt_method', dest="opt_method", required=False, type=str, default="adam",
+                        help="训练模型使用优化器")
+
+    parser.add_argument('--lr_rate', dest="lr_rate", required=False, type=float, default=2e-5,
+                        help="训练学习率")
+
+    parser.add_argument('--weight_decay', dest="weight_decay", required=False, type=float, default=1e-4,
+                        help="训练正则化系数")
+
+    parser.add_argument('--save_epoch', dest="save_epoch", required=False, type=int, default=50,
+                        help="训练中途每隔一定epoch数后对模型进行保存")
+
+    parser.add_argument('--eval_epoch', dest="eval_epoch", required=False, type=int, default=1,
+                        help="训练中途每隔一定epoch数后使用模型在验证集上验证")
+
+    parser.add_argument('--check_point_path', dest="check_point_path", required=True, type=str,
+                        help="训练中途临时保存路径")
+
+    parser.add_argument('--use_gpu', dest="use_gpu", required=False, type=bool, default=torch.cuda.is_available(),
+                        help="训练是否使用GPU")
+
+    parser.add_argument('--gpu_device', dest="gpu_device", required=False, type=str, default="0",
+                        help="训练使用的GPU编号")
+
+    parser.add_argument('--model_name', dest="model_name", required=False, type=str, default="resnet101",
+                        help="训练使用的模型名")
+
+    parser.add_argument('--head_name', dest="head_name", required=False, type=str, default="span_cls",
+                        help="训练使用的预测头")
+
+    parser.add_argument('--strategy_name', dest="strategy_name", required=False, type=str, default="span_cls",
+                        help="使用的训练策略")
+
+    parser.add_argument('--n_classes', dest="n_classes", required=False, type=str, default="span_cls",
+                        help="分类个数")
+
+    configs = BasicConfig()
+    args = parser.parse_args()
+    configs.dataset_path        = args.dataset_path
+    configs.preprocess_strategy = args.preprocess_strategy
+    configs.seq_len             = args.seq_len
+    configs.train_batch_size    = args.train_batch_size
+    configs.test_batch_size     = args.test_batch_size
+    configs.num_epoch           = args.num_epoch
+    configs.opt_method          = args.opt_method
+    configs.lr_rate             = args.lr_rate
+    configs.weight_decay        = args.weight_decay
+    configs.save_epoch          = args.save_epoch
+    configs.eval_epoch          = args.eval_epoch
+    configs.check_point_path    = args.check_point_path
+    configs.use_gpu             = args.use_gpu
+    configs.gpu_device          = args.gpu_device
+    configs.model_name          = args.model_name
+    configs.head_name           = args.head_name
+    configs.strategy_name       = args.strategy_name
+    configs.n_classes           = args.n_classes
+    return configs
+
 
 def _init_model(model_name):
     logger.info('初试化模型')
@@ -36,12 +119,7 @@ def _init_strategy(config: BasicConfig):
 
 
 if __name__ == '__main__':
-    basic_config = BasicConfig()
-    preprocess_with_upsampling(basic_config.datasource_path,
-                               basic_config.dataset_path,
-                               basic_config.preprocess_strategy,
-                               basic_config.train_test_ratio,
-                               basic_config.seq_len)
+    basic_config = _init_configs()
 
     train_mat = scio.loadmat(os.path.join(basic_config.dataset_path,
                                           '%s_upsampling_%d' % (basic_config.preprocess_strategy, basic_config.seq_len),
