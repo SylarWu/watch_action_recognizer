@@ -51,5 +51,6 @@ if __name__ == '__main__':
     tester = Tester(strategy,
                     eval_data_loader=DataLoader(test_dataset, batch_size=basic_config.test_batch_size, shuffle=False),
                     n_classes=basic_config.n_classes,
+                    output_path=basic_config.check_point_path,
                     use_gpu=True)
     tester.testing()

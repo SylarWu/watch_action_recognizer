@@ -91,7 +91,7 @@ def _init_configs() -> BasicConfig:
     configs.head_name           = args.head_name
     configs.strategy_name       = args.strategy_name
     configs.n_classes           = args.n_classes
-    configs.check_point_path    = os.path.join(args.check_point_path, "%s_%s" % (
+    configs.check_point_path    = os.path.join(args.check_point_path, "%s-%s" % (
         configs.model_name, configs.preprocess_strategy
     ))
     if not os.path.exists(configs.check_point_path):
