@@ -55,7 +55,7 @@ def _init_configs() -> BasicConfig:
                         help="训练中途临时保存路径")
 
     parser.add_argument('--use_gpu', dest="use_gpu", required=False, type=bool, default=torch.cuda.is_available(),
-                        help="训练是否使用GPU")
+                        help="训练是否使用GPU：0-3")
 
     parser.add_argument('--gpu_device', dest="gpu_device", required=False, type=str, default="0",
                         help="训练使用的GPU编号")
@@ -69,7 +69,7 @@ def _init_configs() -> BasicConfig:
     parser.add_argument('--strategy_name', dest="strategy_name", required=False, type=str, default="span_cls",
                         help="使用的训练策略")
 
-    parser.add_argument('--n_classes', dest="n_classes", required=False, type=str, default="span_cls",
+    parser.add_argument('--n_classes', dest="n_classes", required=False, type=int, default=18,
                         help="分类个数")
 
     configs = BasicConfig()
@@ -85,13 +85,15 @@ def _init_configs() -> BasicConfig:
     configs.weight_decay        = args.weight_decay
     configs.save_epoch          = args.save_epoch
     configs.eval_epoch          = args.eval_epoch
-    configs.check_point_path    = args.check_point_path
     configs.use_gpu             = args.use_gpu
     configs.gpu_device          = args.gpu_device
     configs.model_name          = args.model_name
     configs.head_name           = args.head_name
     configs.strategy_name       = args.strategy_name
     configs.n_classes           = args.n_classes
+    configs.check_point_path    = os.path.join(args.check_point_path, "%s_%s" % (
+        configs.model_name, configs.preprocess_strategy
+    ))
     return configs
 
 
@@ -120,6 +122,7 @@ def _init_strategy(config: BasicConfig):
 
 if __name__ == '__main__':
     basic_config = _init_configs()
+    os.environ["CUDA_VISIBLE_DEVICES"] = basic_config.gpu_device
 
     train_mat = scio.loadmat(os.path.join(basic_config.dataset_path,
                                           '%s_upsampling_%d' % (basic_config.preprocess_strategy, basic_config.seq_len),
