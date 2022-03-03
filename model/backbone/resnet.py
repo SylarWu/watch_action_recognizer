@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from model.config.resnet_config import ResNetConfig
+from ..config import ResNetConfig
 
 
 class BasicConv(nn.Module):

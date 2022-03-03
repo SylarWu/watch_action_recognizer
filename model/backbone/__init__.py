@@ -1,4 +1,4 @@
-from resnet import resnet
+from .resnet import resnet
 
 __all__ = [
     resnet,

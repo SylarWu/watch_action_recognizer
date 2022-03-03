@@ -8,7 +8,7 @@ import scipy.io as scio
 import torch
 import torch.nn.functional as F
 
-from sensor_data import SensorData
+from .sensor_data import SensorData
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s-%(filename)s-%(levelname)s: %(message)s')
 
