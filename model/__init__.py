@@ -1,6 +1,6 @@
-from model.backbone import resnet
-from model.config import ResNetConfig
-from model.head import SpanClassifier
+from backbone import resnet
+from config import ResNetConfig
+from head import SpanClassifier
 
 __all__ = [
     resnet,
