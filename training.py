@@ -94,6 +94,8 @@ def _init_configs() -> BasicConfig:
     configs.check_point_path    = os.path.join(args.check_point_path, "%s_%s" % (
         configs.model_name, configs.preprocess_strategy
     ))
+    if not os.path.exists(configs.check_point_path):
+        os.makedirs(configs.check_point_path)
     return configs
 
 
