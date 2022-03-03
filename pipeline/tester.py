@@ -1,5 +1,7 @@
+import os
 from tqdm import tqdm
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
@@ -11,7 +13,9 @@ class Tester(object):
                  strategy: nn.Module,
                  eval_data_loader: DataLoader,
                  n_classes: int,
-                 use_gpu=True):
+                 output_path: os.path,
+                 use_gpu=True
+                 ):
         super(Tester, self).__init__()
 
         self.strategy = strategy
@@ -22,6 +26,7 @@ class Tester(object):
 
         self.n_classes = n_classes
         self.confusion = np.zeros((n_classes, n_classes), dtype=np.int32)
+        self.output_path = output_path
 
     def _to_var(self, data: tuple):
         if self.use_gpu:
@@ -49,7 +54,6 @@ class Tester(object):
 
         return precision, recall, f1
 
-
     def testing(self):
         if self.use_gpu:
             self.strategy = self.strategy.cuda()
@@ -67,9 +71,13 @@ class Tester(object):
         print(self.confusion)
         accuracy = self._calc_accuracy()
         precision, recall, f1 = self._calc_precision_recall_f1()
-        print('Accuracy: ' + str(accuracy))
         print('Precision: ' + str(precision))
         print('Recall: ' + str(recall))
         print('F1: ' + str(f1))
+        print('mAccuracy: ' + str(accuracy))
+        print('mPricision: ' + str(np.mean(precision)))
+        print('mRecall: ' + str(np.mean(recall)))
+        print('mF1: ' + str(np.mean(f1)))
 
-
+        result = pd.DataFrame(self.confusion)
+        result.to_csv(os.path.join(self.output_path, 'confusion_matrix.csv'), index=False, header=False)
