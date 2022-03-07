@@ -1,19 +1,9 @@
 import os
-from model import ResNet1D, SpanClassifier
+from model import ResNet1D, MLPMixer, SpanClassifier
 
 
 class BasicConfig(object):
     def __init__(self):
-        self.model_mapping = {
-            'resnet18': ResNet1D.__name__,
-            'resnet34': ResNet1D.__name__,
-            'resnet50': ResNet1D.__name__,
-            'resnet101': ResNet1D.__name__,
-        }
-        self.head_mapping = {
-            'span_cls': SpanClassifier.__name__,
-        }
-
         # model/head/strategy
         self.model_name = 'resnet101'
         self.head_name = 'span_cls'
@@ -45,6 +35,16 @@ class BasicConfig(object):
         self.test_batch_size = 64
         self.model_path = os.path.join('/data/wuxilei/watch_action_recognizer/log', '%s-%s' % (
             self.model_name, self.preprocess_strategy
-        ), '%s_%s_final' % (self.model_mapping.get(self.model_name), self.head_mapping.get(self.head_name)))
+        ), '%s_%s_final' % (self.model_mapping(self.model_name), self.head_mapping(self.head_name)))
 
         self.n_classes = 18
+
+    def model_mapping(self, model_name: str):
+        if model_name.startswith('resnet'):
+            return ResNet1D.__name__
+        elif model_name.startswith('mixer'):
+            return MLPMixer.__name__
+
+    def head_mapping(self, head_name):
+        if head_name == 'span_cls':
+            return SpanClassifier.__name__

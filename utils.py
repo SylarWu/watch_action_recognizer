@@ -91,7 +91,7 @@ def init_configs() -> BasicConfig:
     configs.test_batch_size = args.test_batch_size
     configs.model_path = os.path.join(args.check_point_path, "%s-%s" % (
         configs.model_name, configs.preprocess_strategy
-    ), '%s_%s_final' % (configs.model_mapping.get(configs.model_name), configs.head_mapping.get(configs.head_name)))
+    ), '%s_%s_final' % (configs.model_mapping(configs.model_name), configs.head_mapping(configs.head_name)))
     configs.n_classes = args.n_classes
 
     if not os.path.exists(configs.check_point_path):
@@ -104,6 +104,9 @@ def init_model(model_name):
     if model_name.startswith('resnet'):
         from model import resnet, ResNetConfig
         return resnet(model_name, ResNetConfig())
+    elif model_name.startswith('mixer'):
+        from model import mlp_mixer, MLPMixerConfig
+        return mlp_mixer(model_name, MLPMixerConfig())
 
 
 def init_head(head_name, hidden_dim, n_classes):
