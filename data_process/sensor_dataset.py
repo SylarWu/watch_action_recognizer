@@ -4,6 +4,7 @@ from torch.utils.data.dataset import Dataset
 
 logger = logging.getLogger(__name__)
 
+
 class SensorDataset(Dataset):
     def __init__(self, mat_data):
         super(SensorDataset, self).__init__()

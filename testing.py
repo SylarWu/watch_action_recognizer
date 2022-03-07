@@ -11,7 +11,6 @@ from pipeline import Tester
 
 logger = logging.getLogger(__name__)
 
-
 if __name__ == '__main__':
     basic_config = init_utils.init_configs()
 
