@@ -2,13 +2,14 @@ import argparse
 import logging
 import os
 import random
+import time
 
 import numpy
 import scipy.io as scio
 import torch
 import torch.nn.functional as F
 
-from .sensor_data import SensorData
+from sensor_data import SensorData
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s-%(filename)s-%(levelname)s: %(message)s')
 
@@ -128,10 +129,11 @@ def preprocess_with_upsampling(datasource_path: os.path,
                     train_data['accData'].append(instance.accData)
                     train_data['gyrData'].append(instance.gyrData)
                     train_data['label'].append(instance.label)
-    elif strategy == 'shuffle':
+    elif strategy.startswith("shuffle_"):
         assert len(ratio) == 2
         for attempt_id, data in enumerate(merge_by_attempt_id):
             # 先shuffle
+            random.seed(time.time())
             random.shuffle(data)
             # 前ratio[0]加入训练集
             for instance in data[:int(len(data) * ratio[0])]:
