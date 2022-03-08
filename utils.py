@@ -107,6 +107,9 @@ def init_model(model_name):
     elif model_name.startswith('mixer'):
         from model import mlp_mixer, MLPMixerConfig
         return mlp_mixer(model_name, MLPMixerConfig())
+    elif model_name.startswith('vit'):
+        from model import vit, TransformerConfig
+        return vit(model_name, TransformerConfig())
 
 
 def init_head(head_name, hidden_dim, n_classes):

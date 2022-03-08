@@ -1,5 +1,10 @@
 import os
-from model import ResNet1D, MLPMixer, SpanClassifier
+from model import (
+    ResNet1D,
+    MLPMixer,
+    ViT,
+    SpanClassifier,
+)
 
 
 class BasicConfig(object):
@@ -44,6 +49,8 @@ class BasicConfig(object):
             return ResNet1D.__name__
         elif model_name.startswith('mixer'):
             return MLPMixer.__name__
+        elif model_name.startswith('vit'):
+            return ViT.__name__
 
     def head_mapping(self, head_name):
         if head_name == 'span_cls':
