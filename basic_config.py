@@ -40,7 +40,7 @@ class BasicConfig(object):
         self.test_batch_size = 64
         self.model_path = os.path.join('/data/wuxilei/watch_action_recognizer/log', '%s-%s' % (
             self.model_name, self.preprocess_strategy
-        ), '%s_%s_final' % (self.model_mapping(self.model_name), self.head_mapping(self.head_name)))
+        ), '%s-%s-final' % (self.model_mapping(self.model_name), self.head_mapping(self.head_name)))
 
         self.n_classes = 18
 

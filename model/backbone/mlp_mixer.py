@@ -89,8 +89,8 @@ class MLPMixer(nn.Module):
 
 
 def mlp_mixer(model_name: str, config: MLPMixerConfig):
-    # mixer-s-16
-    attributes = model_name.split('-')
+    # mixer_s_16
+    attributes = model_name.split('_')
     scales = attributes[1]
     config.patch_size = int(attributes[2])
     if scales == 'es':

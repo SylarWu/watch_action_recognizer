@@ -100,8 +100,8 @@ class ViT(nn.Module):
 
 
 def vit(model_name, config: TransformerConfig):
-    # vit-s-16
-    attributes = model_name.split('-')
+    # vit_s_16
+    attributes = model_name.split('_')
     scales = attributes[1]
     config.patch_size = int(attributes[2])
     if scales == 'es':

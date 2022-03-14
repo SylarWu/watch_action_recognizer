@@ -62,7 +62,7 @@ def preprocess_with_upsampling(datasource_path: os.path,
     :param strategy: 制作数据策略: normal/user_independent/shuffle/
         normal_i: test第i*2 ~ i*2 + 1次尝试，其余尝试数据进行训练，i：0~4
         user_i: test第i人，其余人数据进行train，i：1~10
-        shuffle: 随机shuffle，上面两种的折衷
+        shuffle_i: 第i次随机shuffle，上面两种的折衷
     :param ratio: train/test比例
     :param seq_len: 固定长度
     :return: 在output_dir下生成train.mat/test.mat
