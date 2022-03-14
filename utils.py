@@ -91,7 +91,7 @@ def init_configs() -> BasicConfig:
     configs.test_batch_size = args.test_batch_size
     configs.model_path = os.path.join(args.check_point_path, "%s-%s" % (
         configs.model_name, configs.preprocess_strategy
-    ), '%s_%s_final' % (configs.model_mapping(configs.model_name), configs.head_mapping(configs.head_name)))
+    ), '%s-%s-final' % (configs.model_mapping(configs.model_name), configs.head_mapping(configs.head_name)))
     configs.n_classes = args.n_classes
 
     if not os.path.exists(configs.check_point_path):
