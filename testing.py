@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 if __name__ == '__main__':
     basic_config = init_utils.init_configs()
+    os.environ["CUDA_VISIBLE_DEVICES"] = basic_config.gpu_device
 
     test_mat = scio.loadmat(os.path.join(basic_config.dataset_path,
                                          '%s_upsampling_%d' % (basic_config.preprocess_strategy, basic_config.seq_len),
