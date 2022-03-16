@@ -22,6 +22,8 @@ def init_configs() -> BasicConfig:
                         help="预处理数据集策略，基于此加载相应的数据集：normal_i(0-4)/user_i(1-10)/shuffle_i(0-9)")
     parser.add_argument('--seq_len', dest="seq_len", required=False, type=int, default=224,
                         help="数据集经过处理后序列长度")
+    parser.add_argument('--is_normalize', dest="is_normalize", required=False, type=bool, default=True,
+                        help="是否对整个数据集做归一化处理")
 
     """训练超参"""
     parser.add_argument('--train_batch_size', dest="train_batch_size", required=False, type=int, default=64,
@@ -73,6 +75,7 @@ def init_configs() -> BasicConfig:
     configs.dataset_path = args.dataset_path
     configs.preprocess_strategy = args.preprocess_strategy
     configs.seq_len = args.seq_len
+    configs.is_normalize = args.is_normalize
 
     configs.train_batch_size = args.train_batch_size
     configs.eval_batch_size = args.eval_batch_size

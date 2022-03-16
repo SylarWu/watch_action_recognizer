@@ -19,6 +19,7 @@ class BasicConfig(object):
         self.dataset_path = os.path.join('/data/wuxilei/watch_action_recognizer')
         self.preprocess_strategy = 'shuffle_0'
         self.seq_len = 224
+        self.is_normalize = True
         self.train_test_ratio = [0.8, 0.2]
 
         # 训练超参
