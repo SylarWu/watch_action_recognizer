@@ -29,7 +29,7 @@ parser.add_argument("-s", '--strategy', dest="strategy", required=True, type=str
 parser.add_argument("-l", '--length', dest="seq_len", required=True, type=int,
                     help="经过处理后序列长度")
 
-parser.add_argument("-n", '--normalize', dest="is_normalize", required=True, type=bool,
+parser.add_argument("-n", '--normalize', dest="is_normalize", required=False, type=bool, default=False,
                     help="是否对数据进行预归一化处理")
 
 
