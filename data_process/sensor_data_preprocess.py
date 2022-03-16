@@ -67,8 +67,11 @@ def preprocess_with_upsampling(datasource_path: os.path,
     :param seq_len: 固定长度
     :return: 在output_dir下生成train.mat/test.mat
     """
-    if not os.path.exists(os.path.join(output_dir, '%s_upsampling_%d' % (strategy, seq_len))):
-        os.makedirs(os.path.join(output_dir, '%s_upsampling_%d' % (strategy, seq_len)))
+    dst_dir = os.path.join(output_dir, '%s-upsampling-%d-%s' %
+                           (strategy, seq_len, "normalize" if is_nomalize else "none"))
+
+    if not os.path.exists(dst_dir):
+        os.makedirs(dst_dir)
 
     logger.info("初试化源数据参数")
 
@@ -180,12 +183,8 @@ def preprocess_with_upsampling(datasource_path: os.path,
         test_data[key] = numpy.array(value)
 
     logger.info("数据集生成完成，保存")
-    scio.savemat(os.path.join(output_dir,
-                              '%s-upsampling-%d-%s' % (strategy, seq_len, "normalize" if is_nomalize else "none"),
-                              'train.mat'), train_data)
-    scio.savemat(os.path.join(output_dir,
-                              '%s-upsampling-%d-%s' % (strategy, seq_len, "normalize" if is_nomalize else "none"),
-                              'test.mat'), test_data)
+    scio.savemat(os.path.join(dst_dir, 'train.mat'), train_data)
+    scio.savemat(os.path.join(dst_dir, 'test.mat'), test_data)
 
 
 def _normalize(train_data, test_data):
