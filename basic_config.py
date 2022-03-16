@@ -31,17 +31,19 @@ class BasicConfig(object):
         self.weight_decay = 1e-4
         self.save_epoch = 10
         self.eval_epoch = 1
-        self.check_point_path = os.path.join('/data/wuxilei/watch_action_recognizer/log', '%s-%s' % (
-            self.model_name, self.preprocess_strategy
-        ))
+        self.check_point_path = os.path.join('/data/wuxilei/watch_action_recognizer/log',
+                                             '%s-upsampling-%d-%s-%s' % (self.preprocess_strategy,
+                                                                         self.seq_len,
+                                                                         "normalize" if self.is_normalize else "none",
+                                                                         self.model_name))
         self.use_gpu = True
         self.gpu_device = "0"
 
         # 测试超参
         self.test_batch_size = 64
-        self.model_path = os.path.join('/data/wuxilei/watch_action_recognizer/log', '%s-%s' % (
-            self.model_name, self.preprocess_strategy
-        ), '%s-%s-final' % (self.model_mapping(self.model_name), self.head_mapping(self.head_name)))
+        self.model_path = os.path.join(self.check_point_path,
+                                       '%s-%s-final' % (self.model_mapping(self.model_name),
+                                                        self.head_mapping(self.head_name)))
 
         self.n_classes = 18
 

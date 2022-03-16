@@ -18,7 +18,7 @@ if __name__ == '__main__':
     test_mat = scio.loadmat(os.path.join(basic_config.dataset_path,
                                          '%s-upsampling-%d-%s' %
                                          (basic_config.preprocess_strategy, basic_config.seq_len,
-                                          basic_config.is_normalize),
+                                          "normalize" if basic_config.is_normalize else "none"),
                                          'test.mat'))
     test_dataset = SensorDataset(test_mat)
 

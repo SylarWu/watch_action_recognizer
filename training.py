@@ -17,12 +17,12 @@ if __name__ == '__main__':
     train_mat = scio.loadmat(os.path.join(basic_config.dataset_path,
                                           '%s-upsampling-%d-%s' %
                                           (basic_config.preprocess_strategy, basic_config.seq_len,
-                                           basic_config.is_normalize),
+                                           "normalize" if basic_config.is_normalize else "none"),
                                           'train.mat'))
     eval_mat = scio.loadmat(os.path.join(basic_config.dataset_path,
                                          '%s-upsampling-%d-%s' %
                                          (basic_config.preprocess_strategy, basic_config.seq_len,
-                                          basic_config.is_normalize),
+                                          "normalize" if basic_config.is_normalize else "none"),
                                          'test.mat'))
     train_dataset = SensorDataset(train_mat)
     eval_dataset = SensorDataset(eval_mat)

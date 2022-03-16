@@ -22,7 +22,7 @@ def init_configs() -> BasicConfig:
                         help="预处理数据集策略，基于此加载相应的数据集：normal_i(0-4)/user_i(1-10)/shuffle_i(0-9)")
     parser.add_argument('--seq_len', dest="seq_len", required=False, type=int, default=224,
                         help="数据集经过处理后序列长度")
-    parser.add_argument('--is_normalize', dest="is_normalize", required=False, type=bool, default=True,
+    parser.add_argument('--is_normalize', dest="is_normalize", required=False, type=bool, default=False,
                         help="是否对整个数据集做归一化处理")
 
     """训练超参"""
@@ -46,17 +46,17 @@ def init_configs() -> BasicConfig:
                         help="训练中途临时保存根路径，后面经过处理根据不同模型和数据切分策略做分类")
 
     """GPU相关参数"""
-    parser.add_argument('--use_gpu', dest="use_gpu", required=False, type=bool, default=torch.cuda.is_available(),
+    parser.add_argument('--use_gpu', dest="use_gpu", required=True, type=bool, default=torch.cuda.is_available(),
                         help="训练是否使用GPU")
-    parser.add_argument('--gpu_device', dest="gpu_device", required=False, type=str, default="0",
+    parser.add_argument('--gpu_device', dest="gpu_device", required=True, type=str, default="0",
                         help="训练使用的GPU编号：0-3")
 
     """模型选择相关参数"""
-    parser.add_argument('--model_name', dest="model_name", required=False, type=str, default="resnet101",
+    parser.add_argument('--model_name', dest="model_name", required=True, type=str, default="resnet101",
                         help="训练使用的模型名")
-    parser.add_argument('--head_name', dest="head_name", required=False, type=str, default="span_cls",
+    parser.add_argument('--head_name', dest="head_name", required=True, type=str, default="span_cls",
                         help="训练使用的预测头")
-    parser.add_argument('--strategy_name', dest="strategy_name", required=False, type=str, default="span_cls",
+    parser.add_argument('--strategy_name', dest="strategy_name", required=True, type=str, default="span_cls",
                         help="使用的训练策略")
 
     """测试相关参数"""
@@ -85,9 +85,11 @@ def init_configs() -> BasicConfig:
     configs.weight_decay = args.weight_decay
     configs.save_epoch = args.save_epoch
     configs.eval_epoch = args.eval_epoch
-    configs.check_point_path = os.path.join(args.check_point_path, '%s-%s' % (
-        configs.model_name, configs.preprocess_strategy
-    ))
+    configs.check_point_path = os.path.join(args.check_point_path,
+                                            '%s-upsampling-%d-%s-%s' % (configs.preprocess_strategy,
+                                                                        configs.seq_len,
+                                                                        "normalize" if configs.is_normalize else "none",
+                                                                        configs.model_name))
     configs.use_gpu = args.use_gpu
     configs.gpu_device = args.gpu_device
 
