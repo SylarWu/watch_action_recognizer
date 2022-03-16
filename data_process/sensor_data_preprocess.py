@@ -180,8 +180,12 @@ def preprocess_with_upsampling(datasource_path: os.path,
         test_data[key] = numpy.array(value)
 
     logger.info("数据集生成完成，保存")
-    scio.savemat(os.path.join(output_dir, '%s_upsampling_%d' % (strategy, seq_len), 'train.mat'), train_data)
-    scio.savemat(os.path.join(output_dir, '%s_upsampling_%d' % (strategy, seq_len), 'test.mat'), test_data)
+    scio.savemat(os.path.join(output_dir,
+                              '%s-upsampling-%d-%s' % (strategy, seq_len, "normalize" if is_nomalize else "none"),
+                              'train.mat'), train_data)
+    scio.savemat(os.path.join(output_dir,
+                              '%s-upsampling-%d-%s' % (strategy, seq_len, "normalize" if is_nomalize else "none"),
+                              'test.mat'), test_data)
 
 
 def _normalize(train_data, test_data):
