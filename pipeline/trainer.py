@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 
 
 class Trainer(object):
@@ -38,6 +39,8 @@ class Trainer(object):
         self.check_point_path = check_point_path
 
         self.use_gpu = use_gpu
+
+        self.writer = SummaryWriter(self.check_point_path)
 
     def _init_optimizer(self):
         params = [
@@ -90,7 +93,7 @@ class Trainer(object):
                 data = self._to_var(data)
                 train_loss += self._train_one_step(data)
             log_info += 'Train Loss: %f. ' % train_loss
-
+            self.writer.add_scalar("Train Loss", train_loss, epoch)
             if (epoch + 1) % self.eval_epoch == 0:
                 self.strategy.eval()
                 with torch.no_grad():
@@ -99,6 +102,7 @@ class Trainer(object):
                         data = self._to_var(data)
                         eval_loss += self.strategy(data[0], data[1], data[2])
                 log_info += 'Eval Loss: %f.' % eval_loss
+                self.writer.add_scalar("Eval Loss", eval_loss, epoch)
             if (epoch + 1) % self.save_epoch == 0:
                 torch.save(self.strategy.state_dict(),
                            os.path.join(self.check_point_path, '%s-%s-%d' % (self.strategy.model.__class__.__name__,
