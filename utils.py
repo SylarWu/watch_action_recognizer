@@ -20,7 +20,7 @@ def init_configs() -> BasicConfig:
                         help="包含train.mat/test.mat数据集路径")
     parser.add_argument('--preprocess_strategy', dest="preprocess_strategy", required=True, type=str,
                         help="预处理数据集策略，基于此加载相应的数据集：normal_i(0-4)/user_i(1-10)/shuffle_i(0-9)")
-    parser.add_argument('--seq_len', dest="seq_len", required=False, type=int, default=224,
+    parser.add_argument('--seq_len', dest="seq_len", required=True, type=int, default=224,
                         help="数据集经过处理后序列长度")
     parser.add_argument('--is_normalize', dest="is_normalize", required=False, type=bool, default=False,
                         help="是否对整个数据集做归一化处理")
@@ -42,6 +42,7 @@ def init_configs() -> BasicConfig:
                         help="训练中途每隔一定epoch数后对模型进行保存")
     parser.add_argument('--eval_epoch', dest="eval_epoch", required=False, type=int, default=1,
                         help="训练中途每隔一定epoch数后使用模型在验证集上验证")
+
     parser.add_argument('--check_point_path', dest="check_point_path", required=True, type=str,
                         help="训练中途临时保存根路径，后面经过处理根据不同模型和数据切分策略做分类")
 
@@ -94,9 +95,9 @@ def init_configs() -> BasicConfig:
     configs.gpu_device = args.gpu_device
 
     configs.test_batch_size = args.test_batch_size
-    configs.model_path = os.path.join(args.check_point_path, "%s-%s" % (
-        configs.model_name, configs.preprocess_strategy
-    ), '%s-%s-final' % (configs.model_mapping(configs.model_name), configs.head_mapping(configs.head_name)))
+    configs.model_path = os.path.join(configs.check_point_path,
+                                      '%s-%s-final' % (configs.model_mapping(configs.model_name),
+                                                       configs.head_mapping(configs.head_name)))
     configs.n_classes = args.n_classes
 
     if not os.path.exists(configs.check_point_path):
