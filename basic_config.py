@@ -28,6 +28,8 @@ class BasicConfig(object):
         self.num_epoch = 1000
         self.opt_method = 'adamw'
         self.lr_rate = 1e-4
+        self.lr_rate_adjust_epoch = 20
+        self.lr_rate_adjust_factor = 0.5
         self.weight_decay = 1e-4
         self.save_epoch = 10
         self.eval_epoch = 1

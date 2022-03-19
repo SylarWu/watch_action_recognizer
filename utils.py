@@ -36,6 +36,10 @@ def init_configs() -> BasicConfig:
                         help="训练模型使用优化器")
     parser.add_argument('--lr_rate', dest="lr_rate", required=False, type=float, default=1e-4,
                         help="训练学习率")
+    parser.add_argument('--lr_rate_adjust_epoch', dest="lr_rate_adjust_epoch", required=False, type=int, default=20,
+                        help="每训练一定epoch后根据调整因子调整学习率")
+    parser.add_argument('--lr_rate_adjust_factor', dest="lr_rate_adjust_factor", required=False, type=float, default=0.5,
+                        help="每训练一定epoch后乘以学习率")
     parser.add_argument('--weight_decay', dest="weight_decay", required=False, type=float, default=1e-4,
                         help="训练正则化系数")
     parser.add_argument('--save_epoch', dest="save_epoch", required=False, type=int, default=50,
@@ -85,6 +89,8 @@ def init_configs() -> BasicConfig:
     configs.num_epoch = args.num_epoch
     configs.opt_method = args.opt_method
     configs.lr_rate = args.lr_rate
+    configs.lr_rate_adjust_epoch = args.lr_rate_adjust_epoch
+    configs.lr_rate_adjust_factor = args.lr_rate_adjust_factor
     configs.weight_decay = args.weight_decay
     configs.save_epoch = args.save_epoch
     configs.eval_epoch = args.eval_epoch

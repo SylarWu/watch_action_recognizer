@@ -37,6 +37,8 @@ if __name__ == '__main__':
         num_epoch=basic_config.num_epoch,
         opt_method=basic_config.opt_method,
         lr_rate=basic_config.lr_rate,
+        lr_rate_adjust_epoch=basic_config.lr_rate_adjust_epoch,
+        lr_rate_adjust_factor=basic_config.lr_rate_adjust_factor,
         weight_decay=basic_config.weight_decay,
         save_epoch=basic_config.save_epoch,
         eval_epoch=basic_config.eval_epoch,
