@@ -15,6 +15,8 @@ class Trainer(object):
                  num_epoch: int,
                  opt_method: str,
                  lr_rate: float,
+                 lr_rate_adjust_epoch: int,
+                 lr_rate_adjust_factor: float,
                  weight_decay: float,
                  save_epoch: int,
                  eval_epoch: int,
@@ -32,6 +34,8 @@ class Trainer(object):
 
         self.opt_method = opt_method
         self.lr_rate = lr_rate
+        self.lr_rate_adjust_epoch = lr_rate_adjust_epoch
+        self.lr_rate_adjust_factor = lr_rate_adjust_factor
         self.weight_decay = weight_decay
 
         self.save_epoch = save_epoch
@@ -61,6 +65,9 @@ class Trainer(object):
             self.optimizer = torch.optim.SGD(params=params,
                                              lr=self.lr_rate,
                                              weight_decay=self.weight_decay)
+        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer,
+                                                         self.lr_rate_adjust_epoch,
+                                                         self.lr_rate_adjust_factor)
 
     def _to_var(self, data: tuple):
         if self.use_gpu:
@@ -95,6 +102,7 @@ class Trainer(object):
             for data in tqdm(self.train_data_loader):
                 data = self._to_var(data)
                 train_loss += self._train_one_step(data)
+            self.scheduler.step()
             log_info += 'Train Loss: %f. ' % train_loss
             self.writer.add_scalar("Train Loss", train_loss, epoch)
             if (epoch + 1) % self.eval_epoch == 0:
