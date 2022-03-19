@@ -18,6 +18,7 @@ class Trainer(object):
                  weight_decay: float,
                  save_epoch: int,
                  eval_epoch: int,
+                 patience: int,
                  check_point_path: os.path,
                  use_gpu=True):
         super(Trainer, self).__init__()
@@ -35,6 +36,7 @@ class Trainer(object):
 
         self.save_epoch = save_epoch
         self.eval_epoch = eval_epoch
+        self.patience = patience
 
         self.check_point_path = check_point_path
 
@@ -84,7 +86,8 @@ class Trainer(object):
             self.strategy = self.strategy.cuda()
 
         self._init_optimizer()
-
+        patience_count = 0
+        mini_eval_loss = float('inf')
         for epoch in range(self.num_epoch):
             self.strategy.train()
             log_info = 'Epoch: %d. ' % (epoch + 1)
@@ -103,6 +106,18 @@ class Trainer(object):
                         eval_loss += self.strategy(data[0], data[1], data[2])
                 log_info += 'Eval Loss: %f.' % eval_loss
                 self.writer.add_scalar("Eval Loss", eval_loss, epoch)
+                # 如果启用patience机制
+                if self.patience != 0:
+                    if eval_loss < mini_eval_loss:
+                        mini_eval_loss = eval_loss
+                        patience_count = 0
+                    else:
+                        patience_count += 1
+                    log_info += 'Patience Count: %d.' % patience_count
+                    if patience_count > self.patience:
+                        log_info += 'Stop Early, patience has been running out.'
+                        print(log_info)
+                        break
             if (epoch + 1) % self.save_epoch == 0:
                 torch.save(self.strategy.state_dict(),
                            os.path.join(self.check_point_path, '%s-%s-%d' % (self.strategy.model.__class__.__name__,
