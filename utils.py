@@ -42,6 +42,8 @@ def init_configs() -> BasicConfig:
                         help="训练中途每隔一定epoch数后对模型进行保存")
     parser.add_argument('--eval_epoch', dest="eval_epoch", required=False, type=int, default=1,
                         help="训练中途每隔一定epoch数后使用模型在验证集上验证")
+    parser.add_argument('--patience', dest="patience", required=False, type=int, default=10,
+                        help="Early Stop机制，超过一定轮数eval loss未下降则停止训练")
 
     parser.add_argument('--check_point_path', dest="check_point_path", required=True, type=str,
                         help="训练中途临时保存根路径，后面经过处理根据不同模型和数据切分策略做分类")
@@ -86,6 +88,7 @@ def init_configs() -> BasicConfig:
     configs.weight_decay = args.weight_decay
     configs.save_epoch = args.save_epoch
     configs.eval_epoch = args.eval_epoch
+    configs.patience = args.patience
     configs.check_point_path = os.path.join(args.check_point_path,
                                             '%s-upsampling-%d-%s-%s' % (configs.preprocess_strategy,
                                                                         configs.seq_len,

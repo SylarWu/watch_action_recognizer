@@ -31,6 +31,7 @@ class BasicConfig(object):
         self.weight_decay = 1e-4
         self.save_epoch = 10
         self.eval_epoch = 1
+        self.patience = 10
         self.check_point_path = os.path.join('/data/wuxilei/watch_action_recognizer/log',
                                              '%s-upsampling-%d-%s-%s' % (self.preprocess_strategy,
                                                                          self.seq_len,

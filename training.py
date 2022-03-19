@@ -40,6 +40,7 @@ if __name__ == '__main__':
         weight_decay=basic_config.weight_decay,
         save_epoch=basic_config.save_epoch,
         eval_epoch=basic_config.eval_epoch,
+        patience=basic_config.patience,
         check_point_path=basic_config.check_point_path,
         use_gpu=basic_config.use_gpu,
     )
