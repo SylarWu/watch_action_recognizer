@@ -23,6 +23,9 @@ parser.add_argument("-i", '--input', dest="input_path", required=True, type=str,
 parser.add_argument("-o", '--output', dest="output_path", required=True, type=str,
                     help="数据经过转换后输出路径")
 
+parser.add_argument("-m", '--method', dest="method", required=True, type=str,
+                    help="预处理数据方法：upsampling：上采用到对应长度；padding：填充零到对应长度。")
+
 parser.add_argument("-s", '--strategy', dest="strategy", required=True, type=str,
                     help="制作数据策略：normal_i(0-4)/user_i(1-10)/shuffle")
 
@@ -49,16 +52,37 @@ def _init_config(datasource_path: os.path):
     return sorted(users), sorted(actions), sorted(attempts), sorted(file_path_list)
 
 
-def preprocess_with_upsampling(datasource_path: os.path,
-                               output_dir: os.path,
-                               strategy: str = 'normal_0',
-                               ratio: list = [0.8, 0.2],
-                               seq_len: int = 224,
-                               is_nomalize: bool = False):
+def upsampling_method(origin_mat, factor, seq_len):
+    acc = F.interpolate(torch.from_numpy(origin_mat['accData']), size=(factor * seq_len), mode='linear')
+    gyr = F.interpolate(torch.from_numpy(origin_mat['gyrData']), size=(factor * seq_len), mode='linear')
+    label = (origin_mat['label'][0][0] - 1) * torch.ones((1, factor * seq_len))
+    return acc, gyr, label
+
+
+def padding_method(origin_mat, factor, seq_len):
+    length = origin_mat['label'].shape[1]
+    assert length == origin_mat['accData'].shape[2]
+    assert length == origin_mat['gyrData'].shape[2]
+    acc = F.pad(torch.from_numpy(origin_mat['accData']), (0, factor * seq_len - length), "constant", 0)
+    gyr = F.pad(torch.from_numpy(origin_mat['gyrData']), (0, factor * seq_len - length), "constant", 0)
+    label = (origin_mat['label'][0][0] - 1) * torch.ones((1, factor * seq_len))
+    return acc, gyr, label
+
+
+def preprocess_with_certain_method(datasource_path: os.path,
+                                   output_dir: os.path,
+                                   method: str = 'upsampling',
+                                   strategy: str = 'normal_0',
+                                   ratio: list = [0.8, 0.2],
+                                   seq_len: int = 224,
+                                   is_nomalize: bool = False):
     """
-    在序列轴上进行上采样到固定长度，依据不同策略切分数据成训练/测试集
+    在序列轴上采用进行相应方法到固定长度，依据不同策略切分数据成训练/测试集
     :param datasource_path: 数据源路径
     :param output_dir: 输出路径
+    :param method: 预处理方法
+        upsampling: 上采用数据到相应seq_len长度的倍数
+        padding: 填充数据到相应seq_len长度的倍数
     :param strategy: 制作数据策略: normal/user_independent/shuffle/
         normal_i: test第i*2 ~ i*2 + 1次尝试，其余尝试数据进行训练，i：0~4
         user_i: test第i人，其余人数据进行train，i：1~10
@@ -67,8 +91,9 @@ def preprocess_with_upsampling(datasource_path: os.path,
     :param seq_len: 固定长度
     :return: 在output_dir下生成train.mat/test.mat
     """
-    dst_dir = os.path.join(output_dir, '%s-upsampling-%d-%s' %
-                           (strategy, seq_len, "normalize" if is_nomalize else "none"))
+    # method, strategy, seq_len, normalize/none
+    dst_dir = os.path.join(output_dir, '%s-%s-%d-%s' %
+                           (method, strategy, seq_len, "normalize" if is_nomalize else "none"))
 
     if not os.path.exists(dst_dir):
         os.makedirs(dst_dir)
@@ -77,7 +102,7 @@ def preprocess_with_upsampling(datasource_path: os.path,
 
     users, actions, attempts, file_path_list = _init_config(datasource_path)
 
-    logger.info("开始对数据进行上采样到固定长度: %d" % seq_len)
+    logger.info("开始对数据进行%s处理到固定长度: %d" % (method, seq_len))
 
     merge_by_user_id = [list() for _ in users]
     merge_by_attempt_id = [list() for _ in attempts]
@@ -85,12 +110,14 @@ def preprocess_with_upsampling(datasource_path: os.path,
         user_id, action_id, attempt_id = file_path.split('.')[0].split('_')
         origin_mat = scio.loadmat(os.path.join(datasource_path, file_path))
         length = origin_mat['label'].shape[1]
-        factor = length // seq_len + 1
+        # 由于原数据最短长度为40，所以只有超过40的末尾才做上采用或者padding
+        factor = length // seq_len + (1 if length % seq_len >= 40 else 0)
         assert origin_mat['label'][0][0] == int(action_id)
 
-        acc = F.interpolate(torch.from_numpy(origin_mat['accData']), size=(factor * seq_len), mode='linear')
-        gyr = F.interpolate(torch.from_numpy(origin_mat['gyrData']), size=(factor * seq_len), mode='linear')
-        label = (origin_mat['label'][0][0] - 1) * torch.ones((1, factor * seq_len))
+        if method == "upsampling":
+            acc, gyr, label = upsampling_method(origin_mat, factor, seq_len)
+        elif method == "padding":
+            acc, gyr, label = padding_method(origin_mat, factor, seq_len)
 
         for i in range(factor):
             sensor_data = SensorData(user_id=int(user_id),
@@ -102,7 +129,7 @@ def preprocess_with_upsampling(datasource_path: os.path,
             merge_by_user_id[sensor_data.user_id - 1].append(sensor_data)
             merge_by_attempt_id[sensor_data.attempt_id].append(sensor_data)
 
-    logger.info("上采样完成，开始基于策略对数据进行划分: %s" % strategy)
+    logger.info("处理完成，开始基于策略对数据进行划分: %s" % strategy)
 
     train_data = {
         'accData': list(),
@@ -206,9 +233,10 @@ def _normalize(train_data, test_data):
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    preprocess_with_upsampling(datasource_path=args.input_path,
-                               output_dir=args.output_path,
-                               strategy=args.strategy,
-                               ratio=[0.8, 0.2],
-                               seq_len=args.seq_len,
-                               is_nomalize=args.is_normalize)
+    preprocess_with_certain_method(datasource_path=args.input_path,
+                                   output_dir=args.output_path,
+                                   method=args.method,
+                                   strategy=args.strategy,
+                                   ratio=[0.8, 0.2],
+                                   seq_len=args.seq_len,
+                                   is_nomalize=args.is_normalize)
