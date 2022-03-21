@@ -18,8 +18,10 @@ def init_configs() -> BasicConfig:
                         help="原数据路径，未经过切分")
     parser.add_argument('--dataset_path', dest="dataset_path", required=True, type=str,
                         help="包含train.mat/test.mat数据集路径")
+    parser.add_argument('--preprocess_method', dest="preprocess_method", required=True, type=str,
+                        help="预处理数据集方法策略，上采用方法：upsampling，填充零方法：padding")
     parser.add_argument('--preprocess_strategy', dest="preprocess_strategy", required=True, type=str,
-                        help="预处理数据集策略，基于此加载相应的数据集：normal_i(0-4)/user_i(1-10)/shuffle_i(0-9)")
+                        help="预处理数据集切分策略，基于此加载相应的数据集：normal_i(0-4)/user_i(1-10)/shuffle_i(0-9)")
     parser.add_argument('--seq_len', dest="seq_len", required=True, type=int, default=224,
                         help="数据集经过处理后序列长度")
     parser.add_argument('--is_normalize', dest="is_normalize", required=False, type=bool, default=False,
@@ -80,6 +82,7 @@ def init_configs() -> BasicConfig:
 
     configs.datasource_path = args.datasource_path
     configs.dataset_path = args.dataset_path
+    configs.preprocess_method = args.preprocess_method
     configs.preprocess_strategy = args.preprocess_strategy
     configs.seq_len = args.seq_len
     configs.is_normalize = args.is_normalize

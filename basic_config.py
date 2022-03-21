@@ -17,6 +17,7 @@ class BasicConfig(object):
         # 数据预处理脚本config
         self.datasource_path = os.path.join('/data/wuxilei/watch_action_recognizer', 'transform_source')
         self.dataset_path = os.path.join('/data/wuxilei/watch_action_recognizer')
+        self.preprocess_method = "upsampling"
         self.preprocess_strategy = 'shuffle_0'
         self.seq_len = 224
         self.is_normalize = True

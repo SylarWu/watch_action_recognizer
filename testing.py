@@ -16,9 +16,11 @@ if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = basic_config.gpu_device
 
     test_mat = scio.loadmat(os.path.join(basic_config.dataset_path,
-                                         '%s-upsampling-%d-%s' %
-                                         (basic_config.preprocess_strategy, basic_config.seq_len,
-                                          "normalize" if basic_config.is_normalize else "none"),
+                                         '%s-%s-%d-%s' %
+                                          (basic_config.preprocess_method,
+                                           basic_config.preprocess_strategy,
+                                           basic_config.seq_len,
+                                           "normalize" if basic_config.is_normalize else "none"),
                                          'test.mat'))
     test_dataset = SensorDataset(test_mat)
 
