@@ -40,7 +40,8 @@ def init_configs() -> BasicConfig:
                         help="训练学习率")
     parser.add_argument('--lr_rate_adjust_epoch', dest="lr_rate_adjust_epoch", required=False, type=int, default=20,
                         help="每训练一定epoch后根据调整因子调整学习率")
-    parser.add_argument('--lr_rate_adjust_factor', dest="lr_rate_adjust_factor", required=False, type=float, default=0.5,
+    parser.add_argument('--lr_rate_adjust_factor', dest="lr_rate_adjust_factor", required=False, type=float,
+                        default=0.5,
                         help="每训练一定epoch后乘以学习率")
     parser.add_argument('--weight_decay', dest="weight_decay", required=False, type=float, default=1e-4,
                         help="训练正则化系数")
@@ -99,10 +100,11 @@ def init_configs() -> BasicConfig:
     configs.eval_epoch = args.eval_epoch
     configs.patience = args.patience
     configs.check_point_path = os.path.join(args.check_point_path,
-                                            '%s-upsampling-%d-%s-%s' % (configs.preprocess_strategy,
-                                                                        configs.seq_len,
-                                                                        "normalize" if configs.is_normalize else "none",
-                                                                        configs.model_name))
+                                            '%s-%s-%d-%s' %
+                                            (configs.preprocess_method,
+                                             configs.preprocess_strategy,
+                                             configs.seq_len,
+                                             "normalize" if configs.is_normalize else "none"))
     configs.use_gpu = args.use_gpu
     configs.gpu_device = args.gpu_device
 

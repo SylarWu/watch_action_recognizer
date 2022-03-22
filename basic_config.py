@@ -36,10 +36,11 @@ class BasicConfig(object):
         self.eval_epoch = 1
         self.patience = 10
         self.check_point_path = os.path.join('/data/wuxilei/watch_action_recognizer/log',
-                                             '%s-upsampling-%d-%s-%s' % (self.preprocess_strategy,
-                                                                         self.seq_len,
-                                                                         "normalize" if self.is_normalize else "none",
-                                                                         self.model_name))
+                                             '%s-%s-%d-%s' %
+                                             (self.preprocess_method,
+                                              self.preprocess_strategy,
+                                              self.seq_len,
+                                              "normalize" if self.is_normalize else "none"))
         self.use_gpu = True
         self.gpu_device = "0"
 
