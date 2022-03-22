@@ -100,11 +100,12 @@ def init_configs() -> BasicConfig:
     configs.eval_epoch = args.eval_epoch
     configs.patience = args.patience
     configs.check_point_path = os.path.join(args.check_point_path,
-                                            '%s-%s-%d-%s' %
+                                            '%s-%s-%d-%s-%s' %
                                             (configs.preprocess_method,
                                              configs.preprocess_strategy,
                                              configs.seq_len,
-                                             "normalize" if configs.is_normalize else "none"))
+                                             "normalize" if configs.is_normalize else "none",
+                                             configs.model_name))
     configs.use_gpu = args.use_gpu
     configs.gpu_device = args.gpu_device
 
