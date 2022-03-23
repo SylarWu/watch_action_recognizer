@@ -6,7 +6,7 @@ python="/home/wuxilei/anaconda3/envs/torch/bin/python3.8"
 dataset_path="/data/wuxilei/watch_action_recognizer/"
 check_point_path="/data/wuxilei/watch_action_recognizer/log/"
 
-cuda=0
+cuda=2
 
 for scale in es ms s b
 do
@@ -72,7 +72,7 @@ do
           --test_batch_size 256
         done
       done
-    } &
+    } > ./log/${model_name}.log &
   done
   wait
 done

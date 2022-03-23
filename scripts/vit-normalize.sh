@@ -72,7 +72,7 @@ do
           --test_batch_size 256
         done
       done
-    } &
+    } > ./log/${model_name}.log &
   done
   wait
 done
