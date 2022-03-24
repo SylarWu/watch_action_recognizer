@@ -5,18 +5,27 @@ import matplotlib.pyplot as plt
 
 
 class StrategyStatistic:
-    def __init__(self, n):
+    def __init__(self, models):
         self.count = 0
-        self.accuracy = [0.0 for _ in range(n)]
-        self.precision = [0.0 for _ in range(n)]
-        self.recall = [0.0 for _ in range(n)]
-        self.f1 = [0.0 for _ in range(n)]
+        self.accuracy = {}
+        self.precision = {}
+        self.recall = {}
+        self.f1 = {}
+        for model_name in models:
+            self.accuracy[model_name] = 0
+            self.precision[model_name] = 0
+            self.recall[model_name] = 0
+            self.f1[model_name] = 0
 
     def average(self):
-        self.accuracy = [_ / self.count for _ in self.accuracy]
-        self.precision = [_ / self.count for _ in self.precision]
-        self.recall = [_ / self.count for _ in self.recall]
-        self.f1 = [_ / self.count for _ in self.f1]
+        self._average_metric(self.accuracy)
+        self._average_metric(self.precision)
+        self._average_metric(self.recall)
+        self._average_metric(self.f1)
+
+    def _average_metric(self, dic: dict):
+        for model_name, value in dic.items():
+            dic[model_name] = value / self.count
 
 
 def calc_accuracy(confusion, n_classes):
@@ -41,7 +50,7 @@ def calc_precision_recall_f1(confusion, n_classes):
     return precision, recall, f1
 
 
-def draw_bar(preprocess_strategy, metric, x, y):
+def draw_bar(preprocess_strategy, metric, dic: dict):
     dpi = 120
     plt.figure(figsize=(1280 / dpi, 720 / dpi), dpi=dpi)
     plt.title("%s-%s" % (preprocess_strategy, metric))
@@ -49,10 +58,12 @@ def draw_bar(preprocess_strategy, metric, x, y):
     plt.ylabel(metric)
     plt.ylim(0, 1)
 
-    for a, b in zip(x, y):  # 柱子上的数字显示
-        plt.text(a, b, '%.2f' % b, ha='center', va='bottom', fontsize=10)
+    aftersort = sorted(dic.items(), key=lambda item: item[1])
+
+    for a, b in aftersort:  # 柱子上的数字显示
+        plt.text(a, b, '%.4f' % b, ha='center', va='bottom', fontsize=6)
     plt.xticks(size=8, rotation=-45)
-    for model_name, strategy in zip(x, y):
+    for model_name, strategy in aftersort:
         if model_name.startswith('mixer'):
             plt.bar(model_name, strategy, width=0.4, color='#FFD700')
         elif model_name.startswith('vit'):
@@ -126,97 +137,97 @@ if __name__ == '__main__':
     x.sort()
 
     upsampling_statistics = {
-        'normal': StrategyStatistic(len(x)),
-        'user': StrategyStatistic(len(x)),
-        'shuffle': StrategyStatistic(len(x)),
+        'normal': StrategyStatistic(x),
+        'user': StrategyStatistic(x),
+        'shuffle': StrategyStatistic(x),
     }
 
     for strategy in strategies:
         if strategy.startswith('normal'):
             upsampling_statistics['normal'].count += 1
             for i, model_name in enumerate(x):
-                upsampling_statistics['normal'].accuracy[i] += \
+                upsampling_statistics['normal'].accuracy[model_name] += \
                     np.mean(accuracys["upsampling-%s-224-none-%s" % (strategy, model_name)])
-                upsampling_statistics['normal'].precision[i] += \
+                upsampling_statistics['normal'].precision[model_name] += \
                     np.mean(precisions["upsampling-%s-224-none-%s" % (strategy, model_name)])
-                upsampling_statistics['normal'].recall[i] += \
+                upsampling_statistics['normal'].recall[model_name] += \
                     np.mean(recalls["upsampling-%s-224-none-%s" % (strategy, model_name)])
-                upsampling_statistics['normal'].f1[i] += \
+                upsampling_statistics['normal'].f1[model_name] += \
                     np.mean(f1s["upsampling-%s-224-none-%s" % (strategy, model_name)])
         elif strategy.startswith('user'):
             upsampling_statistics['user'].count += 1
             for i, model_name in enumerate(x):
-                upsampling_statistics['user'].accuracy[i] += \
+                upsampling_statistics['user'].accuracy[model_name] += \
                     np.mean(accuracys["upsampling-%s-224-none-%s" % (strategy, model_name)])
-                upsampling_statistics['user'].precision[i] += \
+                upsampling_statistics['user'].precision[model_name] += \
                     np.mean(precisions["upsampling-%s-224-none-%s" % (strategy, model_name)])
-                upsampling_statistics['user'].recall[i] += \
+                upsampling_statistics['user'].recall[model_name] += \
                     np.mean(recalls["upsampling-%s-224-none-%s" % (strategy, model_name)])
-                upsampling_statistics['user'].f1[i] += \
+                upsampling_statistics['user'].f1[model_name] += \
                     np.mean(f1s["upsampling-%s-224-none-%s" % (strategy, model_name)])
         elif strategy.startswith('shuffle'):
             upsampling_statistics['shuffle'].count += 1
             for i, model_name in enumerate(x):
-                upsampling_statistics['shuffle'].accuracy[i] += \
+                upsampling_statistics['shuffle'].accuracy[model_name] += \
                     np.mean(accuracys["upsampling-%s-224-none-%s" % (strategy, model_name)])
-                upsampling_statistics['shuffle'].precision[i] += \
+                upsampling_statistics['shuffle'].precision[model_name] += \
                     np.mean(precisions["upsampling-%s-224-none-%s" % (strategy, model_name)])
-                upsampling_statistics['shuffle'].recall[i] += \
+                upsampling_statistics['shuffle'].recall[model_name] += \
                     np.mean(recalls["upsampling-%s-224-none-%s" % (strategy, model_name)])
-                upsampling_statistics['shuffle'].f1[i] += \
+                upsampling_statistics['shuffle'].f1[model_name] += \
                     np.mean(f1s["upsampling-%s-224-none-%s" % (strategy, model_name)])
 
     for key, value in upsampling_statistics.items():
         value.average()
-        draw_bar('upsampling_' + key, 'accuracy', x, value.accuracy)
-        draw_bar('upsampling_' + key, 'precision', x, value.precision)
-        draw_bar('upsampling_' + key, 'recall', x, value.recall)
-        draw_bar('upsampling_' + key, 'f1', x, value.f1)
+        draw_bar('upsampling_' + key, 'accuracy', value.accuracy)
+        draw_bar('upsampling_' + key, 'precision', value.precision)
+        draw_bar('upsampling_' + key, 'recall', value.recall)
+        draw_bar('upsampling_' + key, 'f1', value.f1)
 
     padding_statistics = {
-        'normal': StrategyStatistic(len(x)),
-        'user': StrategyStatistic(len(x)),
-        'shuffle': StrategyStatistic(len(x)),
+        'normal': StrategyStatistic(x),
+        'user': StrategyStatistic(x),
+        'shuffle': StrategyStatistic(x),
     }
 
     for strategy in strategies:
         if strategy.startswith('normal'):
             padding_statistics['normal'].count += 1
             for i, model_name in enumerate(x):
-                padding_statistics['normal'].accuracy[i] += \
+                padding_statistics['normal'].accuracy[model_name] += \
                     np.mean(accuracys["padding-%s-224-none-%s" % (strategy, model_name)])
-                padding_statistics['normal'].precision[i] += \
+                padding_statistics['normal'].precision[model_name] += \
                     np.mean(precisions["padding-%s-224-none-%s" % (strategy, model_name)])
-                padding_statistics['normal'].recall[i] += \
+                padding_statistics['normal'].recall[model_name] += \
                     np.mean(recalls["padding-%s-224-none-%s" % (strategy, model_name)])
-                padding_statistics['normal'].f1[i] += \
+                padding_statistics['normal'].f1[model_name] += \
                     np.mean(f1s["padding-%s-224-none-%s" % (strategy, model_name)])
         elif strategy.startswith('user'):
             padding_statistics['user'].count += 1
             for i, model_name in enumerate(x):
-                padding_statistics['user'].accuracy[i] += \
+                padding_statistics['user'].accuracy[model_name] += \
                     np.mean(accuracys["padding-%s-224-none-%s" % (strategy, model_name)])
-                padding_statistics['user'].precision[i] += \
+                padding_statistics['user'].precision[model_name] += \
                     np.mean(precisions["padding-%s-224-none-%s" % (strategy, model_name)])
-                padding_statistics['user'].recall[i] += \
+                padding_statistics['user'].recall[model_name] += \
                     np.mean(recalls["padding-%s-224-none-%s" % (strategy, model_name)])
-                padding_statistics['user'].f1[i] += \
+                padding_statistics['user'].f1[model_name] += \
                     np.mean(f1s["padding-%s-224-none-%s" % (strategy, model_name)])
         elif strategy.startswith('shuffle'):
             padding_statistics['shuffle'].count += 1
             for i, model_name in enumerate(x):
-                padding_statistics['shuffle'].accuracy[i] += \
+                padding_statistics['shuffle'].accuracy[model_name] += \
                     np.mean(accuracys["padding-%s-224-none-%s" % (strategy, model_name)])
-                padding_statistics['shuffle'].precision[i] += \
+                padding_statistics['shuffle'].precision[model_name] += \
                     np.mean(precisions["padding-%s-224-none-%s" % (strategy, model_name)])
-                padding_statistics['shuffle'].recall[i] += \
+                padding_statistics['shuffle'].recall[model_name] += \
                     np.mean(recalls["padding-%s-224-none-%s" % (strategy, model_name)])
-                padding_statistics['shuffle'].f1[i] += \
+                padding_statistics['shuffle'].f1[model_name] += \
                     np.mean(f1s["padding-%s-224-none-%s" % (strategy, model_name)])
 
     for key, value in padding_statistics.items():
         value.average()
-        draw_bar('padding_' + key, 'accuracy', x, value.accuracy)
-        draw_bar('padding_' + key, 'precision', x, value.precision)
-        draw_bar('padding_' + key, 'recall', x, value.recall)
-        draw_bar('padding_' + key, 'f1', x, value.f1)
+        draw_bar('padding_' + key, 'accuracy', value.accuracy)
+        draw_bar('padding_' + key, 'precision', value.precision)
+        draw_bar('padding_' + key, 'recall', value.recall)
+        draw_bar('padding_' + key, 'f1', value.f1)
