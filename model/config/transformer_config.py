@@ -2,7 +2,8 @@ class TransformerConfig(object):
     def __init__(self):
         self.seq_len = 224
         self.patch_size = 16
-        self.n_channels = 3 + 3
+        self.acc_axis = 3
+        self.gyr_axis = 3
         self.d_model = 768
         self.num_layers = 12
         self.n_head = 12
