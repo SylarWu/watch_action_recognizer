@@ -96,7 +96,7 @@ class ResNet1D(nn.Module):
         super(ResNet1D, self).__init__()
         self.inplanes = config.inplanes
 
-        self.in_conv = BasicConv(config.n_axis, config.inplanes,
+        self.in_conv = BasicConv(config.acc_axis + config.gyr_axis, config.inplanes,
                                  kernel_size=7, stride=2, padding=3, activation=True)
         self.maxpool = nn.MaxPool1d(kernel_size=3, stride=2, padding=1)
 
@@ -129,7 +129,8 @@ class ResNet1D(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self, x):
+    def forward(self, accData, gyrData):
+        x = torch.cat([accData, gyrData], dim=1)
         x = self.in_conv(x)
         x = self.maxpool(x)
 

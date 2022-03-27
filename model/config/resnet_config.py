@@ -1,4 +1,5 @@
 class ResNetConfig(object):
     def __init__(self):
-        self.n_axis = 3 + 3
+        self.acc_axis = 3
+        self.gyr_axis = 3
         self.inplanes = 64
