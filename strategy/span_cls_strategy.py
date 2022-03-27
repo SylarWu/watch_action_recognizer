@@ -12,18 +12,14 @@ class SpanCLSStrategy(nn.Module):
         self.loss_fn = nn.CrossEntropyLoss(reduction='mean')
 
     def forward(self, accData, gyrData, label):
-        data = torch.cat([accData, gyrData], dim=1)
-
-        features = self.model(data)
+        features = self.model(accData, gyrData)
 
         logits = self.head(features)
 
         return self.loss_fn(logits, label[:, 0])
 
     def predict(self, accData, gyrData):
-        data = torch.cat([accData, gyrData], dim=1)
-
-        features = self.model(data)
+        features = self.model(accData, gyrData)
 
         logits = self.head(features)
 
