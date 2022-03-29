@@ -131,6 +131,9 @@ def init_model(model_name):
     elif model_name.startswith('vit'):
         from model import vit, TransformerConfig
         return vit(model_name, TransformerConfig())
+    elif model_name.startswith('lstm'):
+        from model import lstm, LSTMConfig
+        return lstm(model_name, LSTMConfig())
 
 
 def init_head(head_name, hidden_dim, n_classes):

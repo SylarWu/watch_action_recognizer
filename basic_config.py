@@ -3,6 +3,7 @@ from model import (
     ResNet1D,
     MLPMixer,
     ViT,
+    LSTM1D,
     SpanClassifier,
 )
 
@@ -60,6 +61,8 @@ class BasicConfig(object):
             return MLPMixer.__name__
         elif model_name.startswith('vit'):
             return ViT.__name__
+        elif model_name.startswith('lstm'):
+            return LSTM1D.__name__
 
     def head_mapping(self, head_name):
         if head_name == 'span_cls':
