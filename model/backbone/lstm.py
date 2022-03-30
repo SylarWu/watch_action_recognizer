@@ -54,15 +54,15 @@ def lstm(model_name: str, config: LSTMConfig):
     elif scales == 'ms':
         # Medium Small
         config.hidden_dim = 256
-        config.num_layers = 1
+        config.num_layers = 2
     elif scales == 's':
         # Small
         config.hidden_dim = 512
-        config.num_layers = 2
+        config.num_layers = 3
     elif scales == 'b':
         # Base
         config.hidden_dim = 768
-        config.num_layers = 2
+        config.num_layers = 4
     return LSTM1D(seq_len=config.seq_len, acc_axis=config.acc_axis, gyr_axis=config.gyr_axis,
                   hidden_dim=config.hidden_dim, num_layers=config.num_layers, bidirectional=config.bidirectional,
                   batch_first=config.batch_first, dropout=config.dropout)
