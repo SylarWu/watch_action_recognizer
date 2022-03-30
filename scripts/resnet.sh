@@ -72,4 +72,4 @@ do
     done
   } > ./log/${model_name}.log &
 done
-
+wait
