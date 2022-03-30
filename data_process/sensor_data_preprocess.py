@@ -32,7 +32,7 @@ parser.add_argument("-s", '--strategy', dest="strategy", required=True, type=str
 parser.add_argument("-l", '--length', dest="seq_len", required=True, type=int,
                     help="经过处理后序列长度")
 
-parser.add_argument("-n", '--normalize', dest="is_normalize", required=False, type=bool, default=False,
+parser.add_argument("-n", '--normalize', dest="is_normalize", required=False, type=bool, default=True,
                     help="是否对数据进行预归一化处理")
 
 
@@ -75,7 +75,7 @@ def preprocess_with_certain_method(datasource_path: os.path,
                                    strategy: str = 'normal_0',
                                    ratio: list = [0.8, 0.2],
                                    seq_len: int = 224,
-                                   is_nomalize: bool = False):
+                                   is_nomalize: bool = True):
     """
     在序列轴上采用进行相应方法到固定长度，依据不同策略切分数据成训练/测试集
     :param datasource_path: 数据源路径
@@ -92,8 +92,8 @@ def preprocess_with_certain_method(datasource_path: os.path,
     :return: 在output_dir下生成train.mat/test.mat
     """
     # method, strategy, seq_len, normalize/none
-    dst_dir = os.path.join(output_dir, '%s-%s-%d-%s' %
-                           (method, strategy, seq_len, "normalize" if is_nomalize else "none"))
+    dst_dir = os.path.join(output_dir, '%s-%s-%d' %
+                           (method, strategy, seq_len))
 
     if not os.path.exists(dst_dir):
         os.makedirs(dst_dir)
@@ -215,20 +215,24 @@ def preprocess_with_certain_method(datasource_path: os.path,
 
 
 def _normalize(train_data, test_data):
-    train_len = train_data['label'].size(0)
-    test_len = test_data['label'].size(0)
+    def get_mean_std(data):
+        axis = data.size(1)
 
-    accData = torch.vstack([train_data['accData'], test_data['accData']])
-    assert accData.size(0) == train_len + test_len
-    accData = (accData - torch.mean(accData, dim=-1, keepdim=True)) / torch.std(accData, dim=-1, keepdim=True)
-    train_data['accData'] = accData[:train_len, :, :]
-    test_data['accData'] = accData[train_len:, :, :]
+        mean = torch.mean(data.permute(1, 0, 2).reshape(axis, -1), dim=-1).unsqueeze(0).unsqueeze(2)
+        std = torch.std(data.permute(1, 0, 2).reshape(axis, -1), dim=-1).unsqueeze(0).unsqueeze(2)
+        return mean, std
 
-    gyrData = torch.vstack([train_data['gyrData'], test_data['gyrData']])
-    assert gyrData.size(0) == train_len + test_len
-    gyrData = (gyrData - torch.mean(gyrData, dim=-1, keepdim=True)) / torch.std(gyrData, dim=-1, keepdim=True)
-    train_data['gyrData'] = gyrData[:train_len, :, :]
-    test_data['gyrData'] = gyrData[train_len:, :, :]
+    def normalize(data, mean, std):
+        return (data - mean) / std
+
+    # 所有数据以训练集的均值和标准差做归一化
+    acc_mean, acc_std = get_mean_std(train_data['accData'])
+    train_data['accData'] = normalize(train_data['accData'], acc_mean, acc_std)
+    test_data['accData'] = normalize(test_data['accData'], acc_mean, acc_std)
+
+    gyr_mean, gyr_std = get_mean_std(train_data['gyrData'])
+    train_data['gyrData'] = normalize(train_data['gyrData'], gyr_mean, gyr_std)
+    test_data['gyrData'] = normalize(test_data['gyrData'], gyr_mean, gyr_std)
 
 
 if __name__ == '__main__':
@@ -238,5 +242,4 @@ if __name__ == '__main__':
                                    method=args.method,
                                    strategy=args.strategy,
                                    ratio=[0.8, 0.2],
-                                   seq_len=args.seq_len,
-                                   is_nomalize=args.is_normalize)
+                                   seq_len=args.seq_len)

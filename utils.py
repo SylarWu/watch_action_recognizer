@@ -24,7 +24,7 @@ def init_configs() -> BasicConfig:
                         help="预处理数据集切分策略，基于此加载相应的数据集：normal_i(0-4)/user_i(1-10)/shuffle_i(0-9)")
     parser.add_argument('--seq_len', dest="seq_len", required=True, type=int, default=224,
                         help="数据集经过处理后序列长度")
-    parser.add_argument('--is_normalize', dest="is_normalize", required=False, type=bool, default=False,
+    parser.add_argument('--is_normalize', dest="is_normalize", required=False, type=bool, default=True,
                         help="是否对整个数据集做归一化处理")
 
     """训练超参"""
@@ -100,11 +100,10 @@ def init_configs() -> BasicConfig:
     configs.eval_epoch = args.eval_epoch
     configs.patience = args.patience
     configs.check_point_path = os.path.join(args.check_point_path,
-                                            '%s-%s-%d-%s-%s' %
+                                            '%s-%s-%d-%s' %
                                             (configs.preprocess_method,
                                              configs.preprocess_strategy,
                                              configs.seq_len,
-                                             "normalize" if configs.is_normalize else "none",
                                              configs.model_name))
     configs.use_gpu = args.use_gpu
     configs.gpu_device = args.gpu_device

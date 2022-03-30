@@ -15,18 +15,16 @@ if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = basic_config.gpu_device
 
     train_mat = scio.loadmat(os.path.join(basic_config.dataset_path,
-                                          '%s-%s-%d-%s' %
+                                          '%s-%s-%d' %
                                           (basic_config.preprocess_method,
                                            basic_config.preprocess_strategy,
-                                           basic_config.seq_len,
-                                           "normalize" if basic_config.is_normalize else "none"),
+                                           basic_config.seq_len),
                                           'train.mat'))
     eval_mat = scio.loadmat(os.path.join(basic_config.dataset_path,
-                                         '%s-%s-%d-%s' %
+                                         '%s-%s-%d' %
                                           (basic_config.preprocess_method,
                                            basic_config.preprocess_strategy,
-                                           basic_config.seq_len,
-                                           "normalize" if basic_config.is_normalize else "none"),
+                                           basic_config.seq_len),
                                          'test.mat'))
     train_dataset = SensorDataset(train_mat)
     eval_dataset = SensorDataset(eval_mat)
