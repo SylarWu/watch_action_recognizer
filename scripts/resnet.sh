@@ -8,7 +8,7 @@ check_point_path="/data/wuxilei/watch_action_recognizer/log/"
 
 cuda=2
 
-for model_name in lstm_es lstm_ms lstm_s lstm_b
+for model_name in resnet18 resnet34 resnet50 resnet101
 do
   {
     for preprocess_method in upsampling padding
