@@ -94,7 +94,7 @@ class Trainer(object):
 
         self._init_optimizer()
         patience_count = 0
-        mini_eval_loss = float('inf')
+        mini_train_loss = float('inf')
         for epoch in range(self.num_epoch):
             self.strategy.train()
             log_info = 'Epoch: %d. ' % (epoch + 1)
@@ -114,23 +114,23 @@ class Trainer(object):
                         eval_loss += self.strategy(data[0], data[1], data[2])
                 log_info += 'Eval Loss: %f.' % eval_loss
                 self.writer.add_scalar("Eval Loss", eval_loss, epoch)
-                # 如果启用patience机制
-                if self.patience != 0:
-                    if eval_loss < mini_eval_loss:
-                        mini_eval_loss = eval_loss
-                        patience_count = 0
-                    else:
-                        patience_count += 1
-                    log_info += 'Patience Count: %d.' % patience_count
-                    if patience_count > self.patience:
-                        log_info += 'Stop Early, patience has been running out.'
-                        print(log_info)
-                        break
             if (epoch + 1) % self.save_epoch == 0:
                 torch.save(self.strategy.state_dict(),
                            os.path.join(self.check_point_path, '%s-%s-%d' % (self.strategy.model.__class__.__name__,
                                                                              self.strategy.head.__class__.__name__,
                                                                              epoch + 1)))
+            # 如果启用patience机制
+            if self.patience != 0:
+                if train_loss < mini_train_loss:
+                    mini_train_loss = train_loss
+                    patience_count = 0
+                else:
+                    patience_count += 1
+                log_info += 'Patience Count: %d.' % patience_count
+                if patience_count > self.patience:
+                    log_info += 'Stop Early, patience has been running out.'
+                    print(log_info)
+                    break
             print(log_info)
         torch.save(self.strategy.state_dict(),
                    os.path.join(self.check_point_path, '%s-%s-final' % (self.strategy.model.__class__.__name__,
