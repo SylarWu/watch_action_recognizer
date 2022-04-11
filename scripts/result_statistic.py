@@ -1,12 +1,9 @@
 import os
-import sys
-
-import torch
-import re
+import json
 import numpy as np
 import pandas as pd
+import csv
 import matplotlib.pyplot as plt
-from pytorch_model_summary import summary
 
 model_colors = {
     "mixer": '#FFD700',
@@ -16,28 +13,65 @@ model_colors = {
 }
 
 
-class StrategyStatistic:
-    def __init__(self, models):
-        self.count = 0
-        self.accuracy = {}
-        self.precision = {}
-        self.recall = {}
-        self.f1 = {}
-        for model_name in models:
-            self.accuracy[model_name] = 0
-            self.precision[model_name] = 0
-            self.recall[model_name] = 0
-            self.f1[model_name] = 0
+def load_json(file_path: os.path):
+    with open(file_path, 'r') as json_file:
+        data = json.load(json_file)
+        return data
 
-    def average(self):
-        self._average_metric(self.accuracy)
-        self._average_metric(self.precision)
-        self._average_metric(self.recall)
-        self._average_metric(self.f1)
 
-    def _average_metric(self, dic: dict):
-        for model_name, value in dic.items():
-            dic[model_name] = value / self.count
+model_params = load_json("./params.json")
+model_flops = load_json("./flops.json")
+
+
+class ModelStatistic:
+    def __init__(self, model_name):
+        self.model_name = model_name
+        self.metric = {
+            'normal': {
+                'accuracy': [],
+                'precision': [],
+                'recall': [],
+                'f1': [],
+            },
+            'user': {
+                'accuracy': [],
+                'precision': [],
+                'recall': [],
+                'f1': []
+            },
+            'shuffle': {
+                'accuracy': [],
+                'precision': [],
+                'recall': [],
+                'f1': []
+            }
+        }
+        self.params = model_params[model_name]
+        self.flops = model_flops[model_name]
+
+    def add_metric(self, strategy, metric_name, metric_value):
+        self.metric[strategy][metric_name].append(metric_value)
+
+    def info(self):
+        info = "{"
+        info += "model_name:%s," % self.model_name
+        info += "params(m):%.4f," % self.params
+        info += "flops(m):%.4f," % self.flops
+        for strategy_name in ["normal", "user", "shuffle"]:
+            for metric_name in ["accuracy", "precision", "recall", "f1"]:
+                info += "%s-%s:%.4f," % (strategy_name, metric_name, np.mean(self.metric[strategy_name][metric_name]))
+        info += "}"
+        return info
+
+def to_csv(model_statistics):
+    with open("statistics.csv", 'w', newline='') as csv_file:
+        writer = csv.writer(csv_file)
+        for model_statistic in model_statistics:
+            row = [model_statistic.model_name, model_statistic.params, model_statistic.flops]
+            for strategy_name in ["normal", "user", "shuffle"]:
+                for metric_name in ["accuracy", "precision", "recall", "f1"]:
+                    row.append(np.mean(model_statistic.metric[strategy_name][metric_name]))
+            writer.writerow(row)
 
 
 def calc_accuracy(confusion, n_classes):
@@ -62,54 +96,112 @@ def calc_precision_recall_f1(confusion, n_classes):
     return precision, recall, f1
 
 
-def draw_bar(preprocess_strategy, metric, dic: dict):
+def draw_model_metric_bar(method, strategy, model_name, metric_name, metric_value):
+    print("%s-%s-%s-%s" % (method, strategy, model_name, metric_name))
+    plt.clf()
     dpi = 120
     plt.figure(figsize=(1280 / dpi, 720 / dpi), dpi=dpi)
-    plt.title("%s-%s" % (preprocess_strategy, metric))
-    plt.xlabel('Model')
-    plt.ylabel(metric)
-    plt.ylim(0, 1)
+    plt.title("%s-%s-%s" % (method, strategy, model_name))
+    color = "#20afdf"
+    if strategy == 'normal':
+        plt.xlabel("The (2*i - 2*i+1)th Attempts")
+    elif strategy == 'user':
+        plt.xlabel("Participant ID")
 
-    aftersort = sorted(dic.items(), key=lambda item: item[1])
+    plt.ylabel(metric_name)
 
-    for a, b in aftersort:  # 柱子上的数字显示
-        plt.text(a, b, '%.4f' % b, ha='center', va='bottom', fontsize=6)
-    plt.xticks(size=8, rotation=-45)
-    for model_name, strategy in aftersort:
+    mean_value = np.mean(metric_value)
+
+    x = list(range(len(metric_value)))
+    plt.bar(x, metric_value, color=color)
+    plt.bar(len(metric_value), mean_value, color="#ccaaee")
+
+    for a, b in zip(x, metric_value):  # 柱子上的数字显示
+        plt.text(a, b, '%.2f' % b, ha='center', va='bottom', fontsize=14)
+    plt.text(len(metric_value), mean_value, '%.2f' % mean_value, ha='center', va='bottom', fontsize=14)
+
+    x_label = list(range(len(metric_value) + 1))
+    x_label[len(metric_value)] = "mean"
+    plt.xticks(list(range(len(metric_value) + 1)), x_label)
+    plt.savefig(os.path.join('./result_pics', "%s-%s-%s-%s" % (method, strategy, model_name, metric_name)))
+    # plt.show()
+
+
+def draw_global_flops_metric_scatter(method, strategy, metric_name, model_statistics):
+    plt.clf()
+    dpi = 120
+    plt.figure(figsize=(1280 / dpi, 720 / dpi), dpi=dpi)
+    plt.title("%s-%s" % (method, strategy))
+    plt.xlabel('FLOPS(M)')
+    plt.ylabel(metric_name)
+    plt.xscale("log")
+    plt.grid(True)
+
+    temp_params = []
+    temp_metrics = []
+    for model_name, model_statistic in model_statistics[method].items():
+        if model_name.startswith('resnet'):
+            temp_params.append(model_statistic.flops)
+            temp_metrics.append(np.mean(model_statistic.metric[strategy][metric_name]))
+    plt.scatter(temp_params, temp_metrics, marker='.', c=model_colors['resnet'], s=80, label='resnet')
+
+    temp_params = []
+    temp_metrics = []
+    for model_name, model_statistic in model_statistics[method].items():
+        if model_name.startswith('vit'):
+            temp_params.append(model_statistic.flops)
+            temp_metrics.append(np.mean(model_statistic.metric[strategy][metric_name]))
+    plt.scatter(temp_params, temp_metrics, marker=',', c=model_colors['vit'], s=80, label='vit')
+
+    temp_params = []
+    temp_metrics = []
+    for model_name, model_statistic in model_statistics[method].items():
         if model_name.startswith('mixer'):
-            plt.bar(model_name, strategy, width=0.4, color=model_colors['mixer'])
-        elif model_name.startswith('vit'):
-            plt.bar(model_name, strategy, width=0.4, color=model_colors['vit'])
-        elif model_name.startswith('resnet'):
-            plt.bar(model_name, strategy, width=0.4, color=model_colors['resnet'])
-        elif model_name.startswith('lstm'):
-            plt.bar(model_name, strategy, width=0.4, color=model_colors['lstm'])
-    plt.savefig(os.path.join('./result_pics', "%s-%s" % (preprocess_strategy, metric)))
+            temp_params.append(model_statistic.flops)
+            temp_metrics.append(np.mean(model_statistic.metric[strategy][metric_name]))
+    plt.scatter(temp_params, temp_metrics, marker='v', c=model_colors['mixer'], s=80, label='mixer')
+
+    temp_params = []
+    temp_metrics = []
+    for model_name, model_statistic in model_statistics[method].items():
+        if model_name.startswith('lstm'):
+            temp_params.append(model_statistic.flops)
+            temp_metrics.append(np.mean(model_statistic.metric[strategy][metric_name]))
+    plt.scatter(temp_params, temp_metrics, marker='*', c=model_colors['lstm'], s=80, label='lstm')
+
+    plt.legend()
     plt.show()
 
 
-def get_backbone(model_name: str):
-    from model import resnet, ResNetConfig
-    from model import vit, TransformerConfig
-    from model import mlp_mixer, MLPMixerConfig
-    from model import lstm, LSTMConfig
-    if model_name.startswith('resnet'):
-        return resnet(model_name, ResNetConfig())
-    elif model_name.startswith('vit'):
-        return vit(model_name, TransformerConfig())
-    elif model_name.startswith('mixer'):
-        return mlp_mixer(model_name, MLPMixerConfig())
-    elif model_name.startswith('lstm'):
-        return lstm(model_name, LSTMConfig())
+def draw_ablation(method, strategies, metric_name, special_model, model_statistics):
+    plt.clf()
+    dpi = 120
+    plt.figure(figsize=(1280 / dpi, 720 / dpi), dpi=dpi)
+    plt.title("%s" % (special_model))
+    scales = ["es", "ms", "s"]
+    patches = [8, 16, 32]
+    colores = ['#FFD700', '#87CEEB', '#483D8B']
+    plt.ylabel(metric_name)
+    for index, strategy in enumerate(strategies):
 
+        x = np.arange(len(scales))
+        bar_width = 0.2
+        plt.subplot(1, len(strategies), index + 1)
+        if index == 0:
+            plt.ylabel(metric_name)
+        plt.title("%s" % strategy)
+        plt.xticks(x + bar_width, scales)
 
-def get_params(model_name: str):
-    backbone = get_backbone(model_name)
-    accData, gyrData = torch.randn(1, 3, 224), torch.randn(1, 3, 224)
-    info = summary(backbone, accData, gyrData, batch_size=1, max_depth=10)
-    _, params = re.search(r"Total params: \S*\n", info).group(0).split(": ")
-    params = params.replace(',', '').replace('\n', '')
-    return int(params)
+        for patch_index, patch in enumerate(patches):
+            temp_metrics = []
+            for scale in scales:
+                temp_metrics.append(np.mean(
+                    model_statistics[method]["%s_%s_%d" % (special_model, scale, patch)].metric[strategy][metric_name]))
+            plt.ylim(int(min(temp_metrics) * 100) // 10 * 10 / 100,
+                     int(max(temp_metrics) * 100) // 10 * 10 / 100 + 0.08)
+            plt.bar(x + (patch_index) * bar_width, temp_metrics, width=bar_width, color=colores[patch_index])
+    plt.legend(["patch size=%d" % _ for _ in patches])
+    plt.show()
 
 
 if __name__ == '__main__':
@@ -129,16 +221,31 @@ if __name__ == '__main__':
         seq_lens.add(int(seq_len))
         models.add(model_name)
 
-    confusions = {}
-    accuracys = {}
-    precisions = {}
-    recalls = {}
-    f1s = {}
+    methods = sorted(methods)
+    strategies = sorted(strategies)
+    seq_lens = sorted(seq_lens)
+    models = sorted(models)
+
+    model_statistics = {
+        'upsampling': {
+            model_name: ModelStatistic(model_name) for model_name in models
+        },
+        'padding': {
+            model_name: ModelStatistic(model_name) for model_name in models
+        },
+    }
 
     for method in methods:
         for strategy in strategies:
             for seq_len in seq_lens:
                 for model_name in models:
+                    if not os.path.exists(os.path.join(checkpoint_path, '%s-%s-%d-%s' %
+                                                                        (method,
+                                                                         strategy,
+                                                                         seq_len,
+                                                                         model_name,),
+                                                       'confusion_matrix.csv')):
+                        continue
                     confusion = pd.read_csv(os.path.join(checkpoint_path, '%s-%s-%d-%s' %
                                                          (method,
                                                           strategy,
@@ -149,212 +256,29 @@ if __name__ == '__main__':
                     accuracy = calc_accuracy(confusion, confusion.shape[0])
                     precision, recall, f1 = calc_precision_recall_f1(confusion, confusion.shape[0])
 
-                    confusions['%s-%s-%d-%s' % (method, strategy, seq_len, model_name)] = confusion
-                    accuracys['%s-%s-%d-%s' % (method, strategy, seq_len, model_name)] = accuracy
-                    precisions['%s-%s-%d-%s' % (method, strategy, seq_len, model_name)] = precision
-                    recalls['%s-%s-%d-%s' % (method, strategy, seq_len, model_name)] = recall
-                    f1s['%s-%s-%d-%s' % (method, strategy, seq_len, model_name)] = f1
+                    stra, _ = strategy.split("_")
+                    model_statistics[method][model_name].add_metric(stra, "accuracy", accuracy)
+                    model_statistics[method][model_name].add_metric(stra, "precision", np.mean(precision))
+                    model_statistics[method][model_name].add_metric(stra, "recall", np.mean(recall))
+                    model_statistics[method][model_name].add_metric(stra, "f1", np.mean(f1))
 
-                    print(('%s-%s-%d-%s' % (method, strategy, seq_len, model_name)).center(100, '='))
-                    print('Confusion: ')
-                    print(confusion)
-                    print('Precision: ' + str(precision))
-                    print('Recall: ' + str(recall))
-                    print('F1: ' + str(f1))
-                    print('mAccuracy: ' + str(accuracy))
-                    print('mPricision: ' + str(np.mean(precision)))
-                    print('mRecall: ' + str(np.mean(recall)))
-                    print('mF1: ' + str(np.mean(f1)))
+    method = "padding"
+    for model_name, statistic in model_statistics[method].items():
+        print(statistic.info())
 
-    x = list(models)
-    x.sort()
+    for model_name, statistic in model_statistics[method].items():
+        for strategy_name, metrics in statistic.metric.items():
+            for metric_name, metric_value in metrics.items():
+                draw_model_metric_bar("padding", strategy_name, model_name, metric_name, metric_value)
 
-    upsampling_statistics = {
-        'normal': StrategyStatistic(x),
-        'user': StrategyStatistic(x),
-        'shuffle': StrategyStatistic(x),
-    }
+    for strategy_name in ["normal", "user", "shuffle"]:
+        for metric_name in ["accuracy", "precision", "recall", "f1"]:
+            draw_global_flops_metric_scatter(method, strategy_name, metric_name, model_statistics)
 
-    for strategy in strategies:
-        if strategy.startswith('normal'):
-            upsampling_statistics['normal'].count += 1
-            for i, model_name in enumerate(x):
-                upsampling_statistics['normal'].accuracy[model_name] += \
-                    np.mean(accuracys["upsampling-%s-224-%s" % (strategy, model_name)])
-                upsampling_statistics['normal'].precision[model_name] += \
-                    np.mean(precisions["upsampling-%s-224-%s" % (strategy, model_name)])
-                upsampling_statistics['normal'].recall[model_name] += \
-                    np.mean(recalls["upsampling-%s-224-%s" % (strategy, model_name)])
-                upsampling_statistics['normal'].f1[model_name] += \
-                    np.mean(f1s["upsampling-%s-224-%s" % (strategy, model_name)])
-        elif strategy.startswith('user'):
-            upsampling_statistics['user'].count += 1
-            for i, model_name in enumerate(x):
-                upsampling_statistics['user'].accuracy[model_name] += \
-                    np.mean(accuracys["upsampling-%s-224-%s" % (strategy, model_name)])
-                upsampling_statistics['user'].precision[model_name] += \
-                    np.mean(precisions["upsampling-%s-224-%s" % (strategy, model_name)])
-                upsampling_statistics['user'].recall[model_name] += \
-                    np.mean(recalls["upsampling-%s-224-%s" % (strategy, model_name)])
-                upsampling_statistics['user'].f1[model_name] += \
-                    np.mean(f1s["upsampling-%s-224-%s" % (strategy, model_name)])
-        elif strategy.startswith('shuffle'):
-            upsampling_statistics['shuffle'].count += 1
-            for i, model_name in enumerate(x):
-                upsampling_statistics['shuffle'].accuracy[model_name] += \
-                    np.mean(accuracys["upsampling-%s-224-%s" % (strategy, model_name)])
-                upsampling_statistics['shuffle'].precision[model_name] += \
-                    np.mean(precisions["upsampling-%s-224-%s" % (strategy, model_name)])
-                upsampling_statistics['shuffle'].recall[model_name] += \
-                    np.mean(recalls["upsampling-%s-224-%s" % (strategy, model_name)])
-                upsampling_statistics['shuffle'].f1[model_name] += \
-                    np.mean(f1s["upsampling-%s-224-%s" % (strategy, model_name)])
+    special_model = 'vit'
+    special_metric = 'accuracy'
+    draw_ablation(method, ['normal', 'user', 'shuffle'], special_metric, special_model, model_statistics)
 
-    for key, value in upsampling_statistics.items():
-        value.average()
-        draw_bar('upsampling_' + key, 'accuracy', value.accuracy)
-        draw_bar('upsampling_' + key, 'precision', value.precision)
-        draw_bar('upsampling_' + key, 'recall', value.recall)
-        draw_bar('upsampling_' + key, 'f1', value.f1)
-
-    padding_statistics = {
-        'normal': StrategyStatistic(x),
-        'user': StrategyStatistic(x),
-        'shuffle': StrategyStatistic(x),
-    }
-
-    for strategy in strategies:
-        if strategy.startswith('normal'):
-            padding_statistics['normal'].count += 1
-            for i, model_name in enumerate(x):
-                padding_statistics['normal'].accuracy[model_name] += \
-                    np.mean(accuracys["padding-%s-224-%s" % (strategy, model_name)])
-                padding_statistics['normal'].precision[model_name] += \
-                    np.mean(precisions["padding-%s-224-%s" % (strategy, model_name)])
-                padding_statistics['normal'].recall[model_name] += \
-                    np.mean(recalls["padding-%s-224-%s" % (strategy, model_name)])
-                padding_statistics['normal'].f1[model_name] += \
-                    np.mean(f1s["padding-%s-224-%s" % (strategy, model_name)])
-        elif strategy.startswith('user'):
-            padding_statistics['user'].count += 1
-            for i, model_name in enumerate(x):
-                padding_statistics['user'].accuracy[model_name] += \
-                    np.mean(accuracys["padding-%s-224-%s" % (strategy, model_name)])
-                padding_statistics['user'].precision[model_name] += \
-                    np.mean(precisions["padding-%s-224-%s" % (strategy, model_name)])
-                padding_statistics['user'].recall[model_name] += \
-                    np.mean(recalls["padding-%s-224-%s" % (strategy, model_name)])
-                padding_statistics['user'].f1[model_name] += \
-                    np.mean(f1s["padding-%s-224-%s" % (strategy, model_name)])
-        elif strategy.startswith('shuffle'):
-            padding_statistics['shuffle'].count += 1
-            for i, model_name in enumerate(x):
-                padding_statistics['shuffle'].accuracy[model_name] += \
-                    np.mean(accuracys["padding-%s-224-%s" % (strategy, model_name)])
-                padding_statistics['shuffle'].precision[model_name] += \
-                    np.mean(precisions["padding-%s-224-%s" % (strategy, model_name)])
-                padding_statistics['shuffle'].recall[model_name] += \
-                    np.mean(recalls["padding-%s-224-%s" % (strategy, model_name)])
-                padding_statistics['shuffle'].f1[model_name] += \
-                    np.mean(f1s["padding-%s-224-%s" % (strategy, model_name)])
-
-    for key, value in padding_statistics.items():
-        value.average()
-        draw_bar('padding_' + key, 'accuracy', value.accuracy)
-        draw_bar('padding_' + key, 'precision', value.precision)
-        draw_bar('padding_' + key, 'recall', value.recall)
-        draw_bar('padding_' + key, 'f1', value.f1)
+    to_csv(model_statistics[method].values())
 
 
-    class ModelStatistic:
-        def __init__(self):
-            self.metric = 0
-            self.params = 0
-
-            self.metric_count = 0
-            self.params_count = 0
-
-        def add_metric(self, metric):
-            self.metric += metric
-            self.metric_count += 1
-
-        def add_params(self, params):
-            self.params += params
-            self.params_count += 1
-
-        def average(self):
-            self.metric /= self.metric_count
-            self.params /= self.params_count
-
-
-    model_statistics = {
-        'resnet18': ModelStatistic(),
-        'resnet34': ModelStatistic(),
-        'resnet50': ModelStatistic(),
-        'resnet101': ModelStatistic(),
-        'lstm_es': ModelStatistic(),
-        'lstm_ms': ModelStatistic(),
-        'lstm_s': ModelStatistic(),
-        'mixer_es': ModelStatistic(),
-        'mixer_ms': ModelStatistic(),
-        'mixer_s': ModelStatistic(),
-        'vit_es': ModelStatistic(),
-        'vit_ms': ModelStatistic(),
-        'vit_s': ModelStatistic(),
-    }
-
-    for key, value in padding_statistics.items():
-        for model_name, accuracy in value.accuracy.items():
-            params = get_params(model_name)
-            model_attributes = model_name.split("_")
-            if len(model_attributes) == 1:
-                model_statistics[model_attributes[0]].add_params(params)
-                model_statistics[model_attributes[0]].add_metric(accuracy)
-            else:
-                model_statistics[model_attributes[0] + "_" + model_attributes[1]].add_params(params)
-                model_statistics[model_attributes[0] + "_" + model_attributes[1]].add_metric(accuracy)
-
-    dpi = 120
-    plt.figure(figsize=(1280 / dpi, 720 / dpi), dpi=dpi)
-    plt.title("%s" % ("accuracy"))
-    plt.xlabel('Total Parameters')
-    plt.ylabel("accuracy")
-    plt.xticks(np.arange(0, 3e7, 3e7 / 20))
-    plt.grid(True)
-    for model_name, model_statistic in model_statistics.items():
-        model_statistic.average()
-
-    temp_params = []
-    temp_metrics = []
-    for model_name, model_statistic in model_statistics.items():
-        if model_name.startswith('resnet'):
-            temp_params.append(model_statistic.params)
-            temp_metrics.append(model_statistic.metric)
-    plt.scatter(temp_params, temp_metrics, marker='.', c=model_colors['resnet'], s=80, label='resnet')
-
-    temp_params = []
-    temp_metrics = []
-    for model_name, model_statistic in model_statistics.items():
-        if model_name.startswith('vit'):
-            temp_params.append(model_statistic.params)
-            temp_metrics.append(model_statistic.metric)
-    plt.scatter(temp_params, temp_metrics, marker=',', c=model_colors['vit'], s=80, label='vit')
-
-    temp_params = []
-    temp_metrics = []
-    for model_name, model_statistic in model_statistics.items():
-        if model_name.startswith('mixer'):
-            temp_params.append(model_statistic.params)
-            temp_metrics.append(model_statistic.metric)
-    plt.scatter(temp_params, temp_metrics, marker='v', c=model_colors['mixer'], s=80, label='mixer')
-
-    temp_params = []
-    temp_metrics = []
-    for model_name, model_statistic in model_statistics.items():
-        if model_name.startswith('lstm'):
-            temp_params.append(model_statistic.params)
-            temp_metrics.append(model_statistic.metric)
-    plt.scatter(temp_params, temp_metrics, marker='*', c=model_colors['lstm'], s=80, label='lstm')
-
-    plt.legend()
-    plt.show()
