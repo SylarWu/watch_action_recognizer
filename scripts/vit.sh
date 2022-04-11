@@ -6,11 +6,11 @@ python="/home/wuxilei/anaconda3/envs/torch/bin/python3.8"
 dataset_path="/data/wuxilei/watch_action_recognizer/"
 check_point_path="/data/wuxilei/watch_action_recognizer/log/"
 
-cuda=2
+cuda=3
 
-for scale in es ms s
+for patch_size in 8 16 32
 do
-  for model_name in vit_${scale}_8 vit_${scale}_16 vit_${scale}_32
+  for model_name in vit_es_${patch_size} vit_ms_${patch_size} vit_s_${patch_size}
   do
     {
       for preprocess_method in upsampling padding
@@ -21,9 +21,9 @@ do
           echo "===============================================基于${preprocess_method}方法${preprocess_strategy}策略对模型进行训练==============================================="
           CUDA_VISIBLE_DEVICES=${cuda} ${python} training.py --dataset_path ${dataset_path} \
           --preprocess_method ${preprocess_method} --preprocess_strategy ${preprocess_strategy} --seq_len 224 \
-          --train_batch_size 512 --eval_batch_size 512 --num_epoch 1000 --opt_method "adamw" \
-          --lr_rate 5e-4 --lr_rate_adjust_epoch 50 --lr_rate_adjust_factor 0.5 --weight_decay 1e-4 \
-          --save_epoch 1001 --eval_epoch 1 --patience 50 \
+          --train_batch_size 512 --eval_batch_size 512 --num_epoch 400 --opt_method "adamw" \
+          --lr_rate 5e-4 --lr_rate_adjust_epoch 40 --lr_rate_adjust_factor 0.5 --weight_decay 1e-4 \
+          --save_epoch 401 --eval_epoch 10 --patience 40 \
           --check_point_path ${check_point_path} --use_gpu true --gpu_device ${cuda} \
           --model_name ${model_name} --head_name "span_cls" --strategy_name "span_cls"
           echo "===============================================基于${preprocess_method}方法${preprocess_strategy}策略对模型进行测试==============================================="
@@ -40,9 +40,9 @@ do
           echo "===============================================基于${preprocess_method}方法${preprocess_strategy}策略对模型进行训练==============================================="
           CUDA_VISIBLE_DEVICES=${cuda} ${python} training.py --dataset_path ${dataset_path} \
           --preprocess_method ${preprocess_method} --preprocess_strategy ${preprocess_strategy} --seq_len 224 \
-          --train_batch_size 512 --eval_batch_size 512 --num_epoch 1000 --opt_method "adamw" \
-          --lr_rate 5e-4 --lr_rate_adjust_epoch 50 --lr_rate_adjust_factor 0.5 --weight_decay 1e-4 \
-          --save_epoch 1001 --eval_epoch 1 --patience 50 \
+          --train_batch_size 512 --eval_batch_size 512 --num_epoch 400 --opt_method "adamw" \
+          --lr_rate 5e-4 --lr_rate_adjust_epoch 40 --lr_rate_adjust_factor 0.5 --weight_decay 1e-4 \
+          --save_epoch 401 --eval_epoch 10 --patience 40 \
           --check_point_path ${check_point_path} --use_gpu true --gpu_device ${cuda} \
           --model_name ${model_name} --head_name "span_cls" --strategy_name "span_cls"
           echo "===============================================基于${preprocess_method}方法${preprocess_strategy}策略对模型进行测试==============================================="
@@ -59,9 +59,9 @@ do
           echo "===============================================基于${preprocess_method}方法${preprocess_strategy}策略对模型进行训练==============================================="
           CUDA_VISIBLE_DEVICES=${cuda} ${python} training.py --dataset_path ${dataset_path} \
           --preprocess_method ${preprocess_method} --preprocess_strategy ${preprocess_strategy} --seq_len 224 \
-          --train_batch_size 512 --eval_batch_size 512 --num_epoch 1000 --opt_method "adamw" \
-          --lr_rate 5e-4 --lr_rate_adjust_epoch 50 --lr_rate_adjust_factor 0.5 --weight_decay 1e-4 \
-          --save_epoch 1001 --eval_epoch 1 --patience 50 \
+          --train_batch_size 512 --eval_batch_size 512 --num_epoch 400 --opt_method "adamw" \
+          --lr_rate 5e-4 --lr_rate_adjust_epoch 40 --lr_rate_adjust_factor 0.5 --weight_decay 1e-4 \
+          --save_epoch 401 --eval_epoch 10 --patience 40 \
           --check_point_path ${check_point_path} --use_gpu true --gpu_device ${cuda} \
           --model_name ${model_name} --head_name "span_cls" --strategy_name "span_cls"
           echo "===============================================基于${preprocess_method}方法${preprocess_strategy}策略对模型进行测试==============================================="
@@ -72,6 +72,7 @@ do
           --test_batch_size 512
         done
       done
-    } > ./log/${model_name}.log
+    } > ./log/${model_name}.log &
   done
+wait
 done
