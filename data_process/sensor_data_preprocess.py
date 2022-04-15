@@ -5,6 +5,7 @@ import random
 import time
 
 import numpy
+import numpy as np
 import scipy.io as scio
 import torch
 import torch.nn.functional as F
@@ -135,11 +136,13 @@ def preprocess_with_certain_method(datasource_path: os.path,
         'accData': list(),
         'gyrData': list(),
         'label': list(),
+        'user_id': list(),
     }
     test_data = {
         'accData': list(),
         'gyrData': list(),
         'label': list(),
+        'user_id': list(),
     }
     if strategy.startswith("normal_"):
         _, target_attempt = strategy.split('_')
@@ -152,6 +155,7 @@ def preprocess_with_certain_method(datasource_path: os.path,
                     test_data['accData'].append(instance.accData)
                     test_data['gyrData'].append(instance.gyrData)
                     test_data['label'].append(instance.label)
+                    test_data['user_id'].append(torch.from_numpy(np.array([[instance.user_id]])))
             else:
                 # 加入训练集
                 for instance in data:
@@ -159,6 +163,7 @@ def preprocess_with_certain_method(datasource_path: os.path,
                     train_data['accData'].append(instance.accData)
                     train_data['gyrData'].append(instance.gyrData)
                     train_data['label'].append(instance.label)
+                    train_data['user_id'].append(torch.from_numpy(np.array([[instance.user_id]])))
     elif strategy.startswith("shuffle_"):
         assert len(ratio) == 2
         for attempt_id, data in enumerate(merge_by_attempt_id):
@@ -171,12 +176,14 @@ def preprocess_with_certain_method(datasource_path: os.path,
                 train_data['accData'].append(instance.accData)
                 train_data['gyrData'].append(instance.gyrData)
                 train_data['label'].append(instance.label)
+                train_data['user_id'].append(torch.from_numpy(np.array([[instance.user_id]])))
             # 后ratio[1]加入测试集
             for instance in data[int(len(data) * ratio[0]):]:
                 assert instance.attempt_id == attempt_id
                 test_data['accData'].append(instance.accData)
                 test_data['gyrData'].append(instance.gyrData)
                 test_data['label'].append(instance.label)
+                test_data['user_id'].append(torch.from_numpy(np.array([[instance.user_id]])))
     else:
         _, target_user = strategy.split('_')
         target_user = int(target_user)
@@ -188,6 +195,7 @@ def preprocess_with_certain_method(datasource_path: os.path,
                     test_data['accData'].append(instance.accData)
                     test_data['gyrData'].append(instance.gyrData)
                     test_data['label'].append(instance.label)
+                    test_data['user_id'].append(torch.from_numpy(np.array([[instance.user_id]])))
             else:
                 # 加入训练集
                 for instance in data:
@@ -195,6 +203,7 @@ def preprocess_with_certain_method(datasource_path: os.path,
                     train_data['accData'].append(instance.accData)
                     train_data['gyrData'].append(instance.gyrData)
                     train_data['label'].append(instance.label)
+                    train_data['user_id'].append(torch.from_numpy(np.array([[instance.user_id]])))
     for key, value in train_data.items():
         train_data[key] = torch.vstack(value)
     for key, value in test_data.items():
