@@ -21,7 +21,7 @@
   "resnet34": 78.952,
   "resnet50": 177,
   "resnet101": 351,
-  "lstm_es": 0.434,
-  "lstm_ms": 2.441,
-  "lstm_s": 13.271
+  "lstm_es": 0.696,
+  "lstm_ms": 4.538,
+  "lstm_s": 25.854
 }
