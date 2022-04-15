@@ -1,8 +1,9 @@
 import os
 import json
+import csv
+import seaborn as sns
 import numpy as np
 import pandas as pd
-import csv
 import matplotlib.pyplot as plt
 
 model_colors = {
@@ -19,8 +20,8 @@ def load_json(file_path: os.path):
         return data
 
 
-model_params = load_json("./params.json")
-model_flops = load_json("./flops.json")
+model_params = load_json(os.path.join("./params.json"))
+model_flops = load_json(os.path.join("./flops.json"))
 
 
 class ModelStatistic:
@@ -62,6 +63,7 @@ class ModelStatistic:
                 info += "%s-%s:%.4f," % (strategy_name, metric_name, np.mean(self.metric[strategy_name][metric_name]))
         info += "}"
         return info
+
 
 def to_csv(model_statistics):
     with open("statistics.csv", 'w', newline='') as csv_file:
@@ -277,8 +279,18 @@ if __name__ == '__main__':
 
     special_model = 'vit'
     special_metric = 'accuracy'
-    draw_ablation(method, ['normal', 'user', 'shuffle'], special_metric, special_model, model_statistics)
+    draw_ablation(method, ['normal', 'user'], special_metric, special_model, model_statistics)
 
     to_csv(model_statistics[method].values())
 
+    confusion_matrix = np.zeros((18, 18))
 
+    for i in range(5):
+        csv_file = pd.read_csv(os.path.join(checkpoint_path, 'padding-normal_%d-224-vit_ms_8' % i, 'confusion_matrix.csv'), sep=',', header=None)
+        confusion_matrix += np.array(csv_file)
+
+    sns.heatmap(confusion_matrix, fmt='g', cmap="Blues", annot=True, cbar=False, xticklabels=[_ for _ in range(18)],
+                yticklabels=[_ for _ in range(18)])
+    plt.ylabel("Prediction Class")
+    plt.xlabel("Target Class")
+    plt.show()
