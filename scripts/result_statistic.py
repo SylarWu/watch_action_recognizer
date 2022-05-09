@@ -119,8 +119,8 @@ def draw_model_metric_bar(method, strategy, model_name, metric_name, metric_valu
     plt.bar(len(metric_value), mean_value, color="#ccaaee")
 
     for a, b in zip(x, metric_value):  # 柱子上的数字显示
-        plt.text(a, b, '%.2f' % b, ha='center', va='bottom', fontsize=14)
-    plt.text(len(metric_value), mean_value, '%.2f' % mean_value, ha='center', va='bottom', fontsize=14)
+        plt.text(a, b, '%.3f' % b, ha='center', va='bottom', fontsize=14)
+    plt.text(len(metric_value), mean_value, '%.3f' % mean_value, ha='center', va='bottom', fontsize=14)
 
     x_label = list(range(len(metric_value) + 1))
     x_label[len(metric_value)] = "mean"
